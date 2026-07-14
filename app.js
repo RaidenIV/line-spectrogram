@@ -28,6 +28,12 @@ const DEFAULTS = Object.freeze({
   showFps: false,
 });
 
+const SPECTROGRAM_DEPTH = 142;
+const SPECTROGRAM_WIDTH = 118;
+const SPECTROGRAM_GROUP_Z = -5;
+const MAX_FRAME_DELTA = 0.05;
+const SCALE_LERP_FACTOR = 0.18;
+
 const dom = {
   canvas: document.querySelector("#visualizer"),
   viewport: document.querySelector("#viewport"),
@@ -92,13 +98,17 @@ const state = {
   analyser: null,
   mediaSource: null,
   frequencyData: null,
-  waveformData: null,
+  spectrumOutput: null,
+  spectrumSampled: null,
+  spectrumMap: null,
+  spectrumMapKey: "",
   objectUrl: null,
   hasAudio: false,
   isPlaying: false,
   isSeeking: false,
-  lines: [],
-  lineGroup: null,
+  spectrogramMesh: null,
+  spectrogramPositionAttribute: null,
+  spectrogramHead: 0,
   nextAnalysisTime: 0,
   lastFrameTime: performance.now(),
   energy: 0,
@@ -225,7 +235,7 @@ function initializeAudioGraph() {
   state.analyser.connect(state.audioContext.destination);
 
   state.frequencyData = new Uint8Array(state.analyser.frequencyBinCount);
-  state.waveformData = new Uint8Array(state.analyser.fftSize);
+  state.spectrumMapKey = "";
   dom.fftReadout.textContent = String(state.analyser.fftSize);
 }
 
@@ -236,152 +246,257 @@ async function ensureAudioContextRunning() {
   }
 }
 
-function clearLineGroup() {
-  if (!state.lineGroup) return;
-
-  for (const line of state.lines) {
-    line.geometry.dispose();
-    line.material.dispose();
-  }
-
-  visualRoot.remove(state.lineGroup);
-  state.lines.length = 0;
-  state.lineGroup = null;
+function clearSpectrogram() {
+  if (!state.spectrogramMesh) return;
+  state.spectrogramMesh.geometry.dispose();
+  state.spectrogramMesh.material.dispose();
+  visualRoot.remove(state.spectrogramMesh);
+  state.spectrogramMesh = null;
+  state.spectrogramPositionAttribute = null;
 }
 
-function makeLineMaterial(index, total) {
-  const age = index / Math.max(1, total - 1);
-  const material = new THREE.MeshBasicMaterial({
-    color: new THREE.Color(state.lineColor),
+function createSpectrogramMaterial() {
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      uColor: { value: new THREE.Color(state.lineColor) },
+      uOpacity: { value: state.lineOpacity },
+      uHead: { value: 0 },
+      uHistoryLines: { value: state.historyLines },
+      uDepthSpan: { value: SPECTROGRAM_DEPTH },
+    },
+    vertexShader: `
+      attribute float historySlot;
+      uniform float uHead;
+      uniform float uHistoryLines;
+      uniform float uDepthSpan;
+      varying float vHistoryFade;
+      #include <fog_pars_vertex>
+
+      void main() {
+        float age = mod(historySlot - uHead + uHistoryLines, uHistoryLines);
+        float normalizedAge = age / max(1.0, uHistoryLines - 1.0);
+        vec3 transformed = position;
+        transformed.z = -normalizedAge * uDepthSpan;
+        vHistoryFade = 1.0 - normalizedAge * 0.7;
+        vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+        #include <fog_vertex>
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      varying float vHistoryFade;
+      #include <common>
+      #include <fog_pars_fragment>
+
+      void main() {
+        gl_FragColor = vec4(uColor, uOpacity * vHistoryFade);
+        #include <fog_fragment>
+        #include <colorspace_fragment>
+      }
+    `,
     transparent: true,
-    opacity: state.lineOpacity * (1 - age * 0.7),
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     side: THREE.DoubleSide,
+    fog: true,
+    toneMapped: false,
   });
-  material.toneMapped = false;
+
   return material;
 }
 
-function makeLineGeometry() {
-  const positions = new Float32Array(state.frequencyBins * 2 * 3);
-  const indices = new Uint16Array(Math.max(0, state.frequencyBins - 1) * 6);
-  const xSpan = 118;
+function createSpectrogramGeometry() {
+  const bins = state.frequencyBins;
+  const rows = state.historyLines;
+  const verticesPerRow = bins * 2;
+  const totalVertices = rows * verticesPerRow;
+  const positions = new Float32Array(totalVertices * 3);
+  const historySlots = new Uint16Array(totalVertices);
+  const indexCount = rows * Math.max(0, bins - 1) * 6;
+  const indices = totalVertices > 65535 ? new Uint32Array(indexCount) : new Uint16Array(indexCount);
   const halfWidth = state.lineWidth / 2;
 
-  for (let i = 0; i < state.frequencyBins; i += 1) {
-    const ratio = i / Math.max(1, state.frequencyBins - 1);
-    const x = (ratio - 0.5) * xSpan;
-    const upper = i * 6;
-    const lower = upper + 3;
+  for (let row = 0; row < rows; row += 1) {
+    const rowVertexOffset = row * verticesPerRow;
+    const rowPositionOffset = rowVertexOffset * 3;
 
-    positions[upper] = x;
-    positions[upper + 1] = halfWidth;
-    positions[upper + 2] = 0;
-    positions[lower] = x;
-    positions[lower + 1] = -halfWidth;
-    positions[lower + 2] = 0;
-  }
+    for (let i = 0; i < bins; i += 1) {
+      const ratio = i / Math.max(1, bins - 1);
+      const x = (ratio - 0.5) * SPECTROGRAM_WIDTH;
+      const upper = rowPositionOffset + i * 6;
+      const lower = upper + 3;
+      const upperVertex = rowVertexOffset + i * 2;
 
-  for (let i = 0; i < state.frequencyBins - 1; i += 1) {
-    const vertex = i * 2;
-    const offset = i * 6;
-    indices[offset] = vertex;
-    indices[offset + 1] = vertex + 1;
-    indices[offset + 2] = vertex + 2;
-    indices[offset + 3] = vertex + 1;
-    indices[offset + 4] = vertex + 3;
-    indices[offset + 5] = vertex + 2;
+      positions[upper] = x;
+      positions[upper + 1] = halfWidth;
+      positions[upper + 2] = 0;
+      positions[lower] = x;
+      positions[lower + 1] = -halfWidth;
+      positions[lower + 2] = 0;
+      historySlots[upperVertex] = row;
+      historySlots[upperVertex + 1] = row;
+    }
+
+    const rowIndexOffset = row * Math.max(0, bins - 1) * 6;
+    for (let i = 0; i < bins - 1; i += 1) {
+      const vertex = rowVertexOffset + i * 2;
+      const offset = rowIndexOffset + i * 6;
+      indices[offset] = vertex;
+      indices[offset + 1] = vertex + 1;
+      indices[offset + 2] = vertex + 2;
+      indices[offset + 3] = vertex + 1;
+      indices[offset + 4] = vertex + 3;
+      indices[offset + 5] = vertex + 2;
+    }
   }
 
   const geometry = new THREE.BufferGeometry();
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const positionAttribute = new THREE.BufferAttribute(positions, 3);
+  positionAttribute.setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute("position", positionAttribute);
+  geometry.setAttribute("historySlot", new THREE.BufferAttribute(historySlots, 1));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   return geometry;
 }
 
 function rebuildSpectrogram() {
-  clearLineGroup();
+  clearSpectrogram();
 
-  state.lineGroup = new THREE.Group();
-  state.lineGroup.position.z = -5;
-  visualRoot.add(state.lineGroup);
+  const geometry = createSpectrogramGeometry();
+  const material = createSpectrogramMaterial();
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.z = SPECTROGRAM_GROUP_Z;
+  mesh.frustumCulled = false;
+  visualRoot.add(mesh);
 
-  const depthSpan = 142;
-  for (let i = 0; i < state.historyLines; i += 1) {
-    const line = new THREE.Mesh(makeLineGeometry(), makeLineMaterial(i, state.historyLines));
-    line.position.z = -(i / Math.max(1, state.historyLines - 1)) * depthSpan;
-    line.frustumCulled = false;
-    state.lines.push(line);
-    state.lineGroup.add(line);
-  }
+  state.spectrogramMesh = mesh;
+  state.spectrogramPositionAttribute = geometry.getAttribute("position");
+  state.spectrogramHead = 0;
+  state.spectrumMapKey = "";
 
   dom.binsReadout.textContent = String(state.frequencyBins);
   resetSpectrogramData();
 }
 
 function resetSpectrogramData() {
-  const halfWidth = state.lineWidth / 2;
-  for (const line of state.lines) {
-    const positions = line.geometry.attributes.position.array;
-    for (let i = 0; i < state.frequencyBins; i += 1) {
+  const attribute = state.spectrogramPositionAttribute;
+  if (attribute) {
+    const positions = attribute.array;
+    const halfWidth = state.lineWidth / 2;
+    const totalPoints = state.historyLines * state.frequencyBins;
+
+    for (let i = 0; i < totalPoints; i += 1) {
       const upper = i * 6 + 1;
       const lower = upper + 3;
       positions[upper] = halfWidth;
       positions[lower] = -halfWidth;
     }
-    line.geometry.attributes.position.needsUpdate = true;
+
+    attribute.clearUpdateRanges();
+    attribute.addUpdateRange(0, positions.length);
+    attribute.needsUpdate = true;
   }
 
+  state.spectrogramHead = 0;
+  if (state.spectrogramMesh) state.spectrogramMesh.material.uniforms.uHead.value = 0;
   state.energy = 0;
   state.peak = 0;
   state.smoothedEnergy = 0;
   state.energyAverage = 0.02;
   state.beatFlash = 0;
+  dom.energyReadout.textContent = "0.00";
+  dom.peakReadout.textContent = "0.00";
 }
 
-function sampleSpectrum(outputLength) {
-  const output = new Float32Array(outputLength);
-  if (!state.analyser || !state.frequencyData) return output;
+function ensureSpectrumSamplingMap(outputLength) {
+  const sourceLength = state.frequencyData?.length || 0;
+  const effectiveLength = state.mirrorFrequency ? Math.ceil(outputLength / 2) : outputLength;
+  const key = `${sourceLength}:${outputLength}:${effectiveLength}:${state.logFrequency ? 1 : 0}:${state.mirrorFrequency ? 1 : 0}`;
+  if (state.spectrumMapKey === key && state.spectrumMap) return;
 
-  state.analyser.getByteFrequencyData(state.frequencyData);
-  state.analyser.getByteTimeDomainData(state.waveformData);
+  state.spectrumOutput = new Float32Array(outputLength);
+  state.spectrumSampled = new Float32Array(effectiveLength);
 
-  const source = state.frequencyData;
-  const usableBins = Math.max(2, Math.floor(source.length * 0.88));
-  const mirror = state.mirrorFrequency;
-  const effectiveLength = mirror ? Math.ceil(outputLength / 2) : outputLength;
-  const sampled = new Float32Array(effectiveLength);
+  const usableBins = Math.max(2, Math.floor(sourceLength * 0.88));
+  const starts = new Uint16Array(effectiveLength);
+  const ends = new Uint16Array(effectiveLength);
+  const centers = new Float32Array(effectiveLength);
+  const radii = new Uint16Array(effectiveLength);
+  const inverseWeightSums = new Float32Array(effectiveLength);
+  const mirrorIndices = state.mirrorFrequency ? new Uint16Array(outputLength) : null;
 
   for (let i = 0; i < effectiveLength; i += 1) {
     const ratio = i / Math.max(1, effectiveLength - 1);
     const mappedRatio = state.logFrequency
-      ? (Math.exp(ratio * Math.log(1 + 12)) - 1) / 12
+      ? (Math.exp(ratio * Math.log(13)) - 1) / 12
       : ratio;
     const center = mappedRatio * (usableBins - 1);
     const radius = Math.max(1, Math.floor(usableBins / effectiveLength / 2));
     const start = Math.max(0, Math.floor(center) - radius);
     const end = Math.min(usableBins - 1, Math.ceil(center) + radius);
-
-    let sum = 0;
     let weightSum = 0;
+
     for (let index = start; index <= end; index += 1) {
       const distance = Math.abs(index - center) / Math.max(1, radius);
-      const weight = Math.max(0.1, 1 - distance * 0.65);
-      sum += source[index] * weight;
-      weightSum += weight;
+      weightSum += Math.max(0.1, 1 - distance * 0.65);
     }
 
-    sampled[i] = sum / Math.max(weightSum, 1) / 255;
+    starts[i] = start;
+    ends[i] = end;
+    centers[i] = center;
+    radii[i] = radius;
+    inverseWeightSums[i] = 1 / Math.max(weightSum, 1);
   }
 
-  if (mirror) {
+  if (mirrorIndices) {
     for (let i = 0; i < outputLength; i += 1) {
       const distanceFromCenter = Math.abs(i - (outputLength - 1) / 2);
       const normalized = 1 - distanceFromCenter / Math.max(1, (outputLength - 1) / 2);
-      const index = Math.min(effectiveLength - 1, Math.floor(normalized * (effectiveLength - 1)));
-      output[i] = sampled[index];
+      mirrorIndices[i] = Math.min(effectiveLength - 1, Math.floor(normalized * (effectiveLength - 1)));
     }
+  }
+
+  state.spectrumMap = {
+    starts,
+    ends,
+    centers,
+    radii,
+    inverseWeightSums,
+    mirrorIndices,
+  };
+  state.spectrumMapKey = key;
+}
+
+function sampleSpectrum(outputLength) {
+  ensureSpectrumSamplingMap(outputLength);
+  const output = state.spectrumOutput;
+  output.fill(0);
+  if (!state.analyser || !state.frequencyData) return output;
+
+  state.analyser.getByteFrequencyData(state.frequencyData);
+
+  const source = state.frequencyData;
+  const sampled = state.spectrumSampled;
+  const { starts, ends, centers, radii, inverseWeightSums, mirrorIndices } = state.spectrumMap;
+
+  for (let i = 0; i < sampled.length; i += 1) {
+    const center = centers[i];
+    const radius = radii[i];
+    let sum = 0;
+
+    for (let index = starts[i]; index <= ends[i]; index += 1) {
+      const distance = Math.abs(index - center) / Math.max(1, radius);
+      const weight = Math.max(0.1, 1 - distance * 0.65);
+      sum += source[index] * weight;
+    }
+
+    sampled[i] = sum * inverseWeightSums[i] / 255;
+  }
+
+  if (mirrorIndices) {
+    for (let i = 0; i < outputLength; i += 1) output[i] = sampled[mirrorIndices[i]];
   } else {
     output.set(sampled);
   }
@@ -399,7 +514,7 @@ function analyzeFrame() {
   for (let i = 0; i < spectrum.length; i += 1) {
     const value = spectrum[i];
     energySum += value * value;
-    peak = Math.max(peak, value);
+    if (value > peak) peak = value;
     weightedFrequency += i * value;
     frequencyWeight += value;
   }
@@ -416,52 +531,55 @@ function analyzeFrame() {
   const isBeat = rms > Math.max(0.075, state.energyAverage * 1.38) && peak > 0.32;
   if (isBeat) state.beatFlash = 1;
 
-  const recycled = state.lines.pop();
-  if (!recycled) return;
+  const attribute = state.spectrogramPositionAttribute;
+  if (!attribute || !state.spectrogramMesh) return;
 
-  const positions = recycled.geometry.attributes.position.array;
+  state.spectrogramHead = (state.spectrogramHead - 1 + state.historyLines) % state.historyLines;
+  state.spectrogramMesh.material.uniforms.uHead.value = state.spectrogramHead;
+
+  const positions = attribute.array;
+  const rowOffset = state.spectrogramHead * state.frequencyBins * 6;
   const beatBoost = state.beatPulse ? state.beatFlash * 0.16 : 0;
-
   const halfWidth = state.lineWidth / 2;
+  const denominator = Math.max(1, state.frequencyBins - 1);
+
   for (let i = 0; i < state.frequencyBins; i += 1) {
     const value = spectrum[i];
     const shaped = Math.pow(value, 1.7);
-    const bassBias = 1 + (1 - i / Math.max(1, state.frequencyBins - 1)) * beatBoost;
+    const bassBias = 1 + (1 - i / denominator) * beatBoost;
     const height = shaped * state.heightScale * bassBias;
-    const upper = i * 6 + 1;
+    const upper = rowOffset + i * 6 + 1;
     const lower = upper + 3;
     positions[upper] = height + halfWidth;
     positions[lower] = height - halfWidth;
   }
 
-  recycled.geometry.attributes.position.needsUpdate = true;
-  state.lines.unshift(recycled);
-
-  const depthSpan = 142;
-  const color = new THREE.Color(state.lineColor);
-  for (let i = 0; i < state.lines.length; i += 1) {
-    const line = state.lines[i];
-    const age = i / Math.max(1, state.lines.length - 1);
-    line.position.z = -age * depthSpan;
-    line.material.color.copy(color);
-    line.material.opacity = state.lineOpacity * (1 - age * 0.7);
-  }
+  attribute.clearUpdateRanges();
+  attribute.addUpdateRange(rowOffset, state.frequencyBins * 6);
+  attribute.needsUpdate = true;
+  dom.energyReadout.textContent = rms.toFixed(2);
+  dom.peakReadout.textContent = peak.toFixed(2);
 }
 
 function updateLineWidths() {
-  const halfWidth = state.lineWidth / 2;
+  const attribute = state.spectrogramPositionAttribute;
+  if (!attribute) return;
 
-  for (const line of state.lines) {
-    const positions = line.geometry.attributes.position.array;
-    for (let i = 0; i < state.frequencyBins; i += 1) {
-      const upper = i * 6 + 1;
-      const lower = upper + 3;
-      const center = (positions[upper] + positions[lower]) / 2;
-      positions[upper] = center + halfWidth;
-      positions[lower] = center - halfWidth;
-    }
-    line.geometry.attributes.position.needsUpdate = true;
+  const positions = attribute.array;
+  const halfWidth = state.lineWidth / 2;
+  const totalPoints = state.historyLines * state.frequencyBins;
+
+  for (let i = 0; i < totalPoints; i += 1) {
+    const upper = i * 6 + 1;
+    const lower = upper + 3;
+    const center = (positions[upper] + positions[lower]) / 2;
+    positions[upper] = center + halfWidth;
+    positions[lower] = center - halfWidth;
   }
+
+  attribute.clearUpdateRanges();
+  attribute.addUpdateRange(0, positions.length);
+  attribute.needsUpdate = true;
 }
 
 function updateFpsVisibility() {
@@ -472,29 +590,22 @@ function updateFpsVisibility() {
 function updateVisualDynamics(delta) {
   state.beatFlash = Math.max(0, state.beatFlash - delta * 3.4);
 
-  if (state.beatPulse) {
-    beatLight.intensity = state.beatFlash * 3.2;
-    beatLight.color.set(state.lineColor);
-    const targetScale = 1 + state.beatFlash * 0.018;
-    visualRoot.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.18);
-  } else {
-    beatLight.intensity = 0;
-    visualRoot.scale.lerp(new THREE.Vector3(1, 1, 1), 0.18);
-  }
+  const targetScale = state.beatPulse ? 1 + state.beatFlash * 0.018 : 1;
+  const nextScale = visualRoot.scale.x + (targetScale - visualRoot.scale.x) * SCALE_LERP_FACTOR;
+  visualRoot.scale.setScalar(nextScale);
+  beatLight.intensity = state.beatPulse ? state.beatFlash * 3.2 : 0;
 
   if (state.autoCamera && state.isPlaying) {
-    const follow = state.cameraDrift;
-    const targetX = (state.spectralCentroid - 0.5) * 42 * follow;
+    const targetX = (state.spectralCentroid - 0.5) * 42 * state.cameraDrift;
     controls.target.x += (targetX - controls.target.x) * 0.025;
     camera.position.x += (targetX * 0.65 - camera.position.x) * 0.012;
   }
-
-  dom.energyReadout.textContent = state.energy.toFixed(2);
-  dom.peakReadout.textContent = state.peak.toFixed(2);
 }
 
+const cameraDirection = new THREE.Vector3();
+
 function updateCameraFromControls() {
-  const direction = camera.position.clone().sub(controls.target).normalize();
+  const direction = cameraDirection.subVectors(camera.position, controls.target).normalize();
   const horizontal = Math.sqrt(Math.max(0.001, 1 - direction.y * direction.y));
   const azimuth = Math.atan2(direction.x, direction.z);
   const distance = state.cameraDistance;
@@ -508,18 +619,32 @@ function updateCameraFromControls() {
   controls.update();
 }
 
+let rendererWidth = 0;
+let rendererHeight = 0;
+let resizeFrame = 0;
+
 function resizeRenderer() {
+  resizeFrame = 0;
   const width = dom.viewport.clientWidth;
   const height = dom.viewport.clientHeight;
+  if (width === rendererWidth && height === rendererHeight) return;
+
+  rendererWidth = width;
+  rendererHeight = height;
   renderer.setSize(width, height, false);
   camera.aspect = width / Math.max(1, height);
   camera.updateProjectionMatrix();
 }
 
+function queueRendererResize() {
+  if (resizeFrame) return;
+  resizeFrame = requestAnimationFrame(resizeRenderer);
+}
+
 function animate(now) {
   requestAnimationFrame(animate);
 
-  const delta = Math.min(0.05, (now - state.lastFrameTime) / 1000);
+  const delta = Math.min(MAX_FRAME_DELTA, (now - state.lastFrameTime) / 1000);
   state.lastFrameTime = now;
 
   if (state.showFps) {
@@ -625,35 +750,34 @@ function bindControl(name, definition) {
   const output = document.querySelector(`#${name}Value`);
   if (!input || !output) return;
 
-  const applyValue = (shouldRebuild = false) => {
-    state[name] = definition.parser(input.value);
-    output.value = definition.format(state[name]);
-    output.textContent = definition.format(state[name]);
+  const updateDisplay = (value) => {
+    output.textContent = definition.format(value);
     setRangeFill(input);
+  };
+
+  const applyValue = (commitRebuild = false) => {
+    const parsedValue = definition.parser(input.value);
+    updateDisplay(parsedValue);
+
+    if (definition.rebuild && !commitRebuild) return;
+    state[name] = parsedValue;
 
     if (name === "smoothing" && state.analyser) {
       state.analyser.smoothingTimeConstant = state.smoothing;
-    }
-    if (name === "lineWidth") {
+    } else if (name === "lineWidth") {
       updateLineWidths();
-    }
-    if (name === "lineOpacity") {
-      for (let i = 0; i < state.lines.length; i += 1) {
-        const age = i / Math.max(1, state.lines.length - 1);
-        state.lines[i].material.opacity = state.lineOpacity * (1 - age * 0.7);
-      }
-    }
-    if (name === "cameraDistance" || name === "cameraHeight") {
+    } else if (name === "lineOpacity" && state.spectrogramMesh) {
+      state.spectrogramMesh.material.uniforms.uOpacity.value = state.lineOpacity;
+    } else if (name === "cameraDistance" || name === "cameraHeight") {
       updateCameraFromControls();
     }
-    if (shouldRebuild && definition.rebuild) {
-      rebuildSpectrogram();
-    }
+
+    if (definition.rebuild && commitRebuild) rebuildSpectrogram();
   };
 
   input.addEventListener("input", () => applyValue(false));
   input.addEventListener("change", () => applyValue(true));
-  applyValue(false);
+  updateDisplay(state[name]);
 }
 
 function resetVisualControls() {
@@ -725,8 +849,8 @@ function applyFftSize() {
   if (state.analyser) {
     state.analyser.fftSize = state.fftSize;
     state.frequencyData = new Uint8Array(state.analyser.frequencyBinCount);
-    state.waveformData = new Uint8Array(state.analyser.fftSize);
   }
+  state.spectrumMapKey = "";
   dom.fftReadout.textContent = String(state.fftSize);
 }
 
@@ -781,7 +905,9 @@ dom.lineColor.addEventListener("input", () => {
   dom.lineColorValue.textContent = state.lineColor.toUpperCase();
   document.documentElement.style.setProperty("--accent", state.lineColor);
   beatLight.color.set(state.lineColor);
-  for (const line of state.lines) line.material.color.set(state.lineColor);
+  if (state.spectrogramMesh) {
+    state.spectrogramMesh.material.uniforms.uColor.value.set(state.lineColor);
+  }
 });
 
 dom.fileInput.addEventListener("change", (event) => {
@@ -923,8 +1049,18 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
-window.addEventListener("resize", resizeRenderer);
+const viewportResizeObserver = typeof ResizeObserver === "function"
+  ? new ResizeObserver(queueRendererResize)
+  : null;
+
+if (viewportResizeObserver) {
+  viewportResizeObserver.observe(dom.viewport);
+} else {
+  window.addEventListener("resize", queueRendererResize);
+}
+
 window.addEventListener("beforeunload", () => {
+  viewportResizeObserver?.disconnect();
   if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
 });
 
