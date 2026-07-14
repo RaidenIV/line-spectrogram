@@ -11,8 +11,10 @@ const DEFAULTS = Object.freeze({
   heightScale: 42,
   historyLines: 160,
   frequencyBins: 96,
+  fftSize: 2048,
   smoothing: 0.78,
   scrollSpeed: 30,
+  lineWidth: 0.28,
   lineOpacity: 0.72,
   lineColor: "#ff2a1a",
   logFrequency: true,
@@ -21,8 +23,9 @@ const DEFAULTS = Object.freeze({
   cameraDistance: 190,
   cameraHeight: 68,
   cameraDrift: 0.45,
-  autoCamera: true,
-  showGrid: true,
+  autoCamera: false,
+  showGrid: false,
+  showFps: false,
 });
 
 const dom = {
@@ -56,11 +59,16 @@ const dom = {
   resetCamera: document.querySelector("#resetCamera"),
   lineColor: document.querySelector("#lineColor"),
   lineColorValue: document.querySelector("#lineColorValue"),
+  fftSize: document.querySelector("#fftSize"),
   autoCamera: document.querySelector("#autoCamera"),
+  showFps: document.querySelector("#showFps"),
+  exportSettings: document.querySelector("#exportSettings"),
   fftReadout: document.querySelector("#fftReadout"),
   binsReadout: document.querySelector("#binsReadout"),
   energyReadout: document.querySelector("#energyReadout"),
   peakReadout: document.querySelector("#peakReadout"),
+  fpsBlock: document.querySelector("#fpsBlock"),
+  fpsReadout: document.querySelector("#fpsReadout"),
 };
 
 const controlDefinitions = {
@@ -69,13 +77,14 @@ const controlDefinitions = {
   frequencyBins: { parser: Number, format: (value) => String(Math.round(value)), rebuild: true },
   smoothing: { parser: Number, format: (value) => Number(value).toFixed(2), rebuild: false },
   scrollSpeed: { parser: Number, format: (value) => `${Math.round(value)} FPS`, rebuild: false },
+  lineWidth: { parser: Number, format: (value) => Number(value).toFixed(2), rebuild: false },
   lineOpacity: { parser: Number, format: (value) => `${Math.round(value * 100)}%`, rebuild: false },
   cameraDistance: { parser: Number, format: (value) => String(Math.round(value)), rebuild: false },
   cameraHeight: { parser: Number, format: (value) => String(Math.round(value)), rebuild: false },
   cameraDrift: { parser: Number, format: (value) => `${Math.round(value * 100)}%`, rebuild: false },
 };
 
-const toggleNames = ["logFrequency", "mirrorFrequency", "beatPulse", "autoCamera", "showGrid"];
+const toggleNames = ["logFrequency", "mirrorFrequency", "beatPulse", "autoCamera", "showGrid", "showFps"];
 
 const state = {
   ...DEFAULTS,
@@ -99,6 +108,9 @@ const state = {
   beatFlash: 0,
   spectralCentroid: 0.5,
   dragDepth: 0,
+  fpsFrameCount: 0,
+  fpsLastUpdate: performance.now(),
+  currentFps: 0,
 };
 
 const scene = new THREE.Scene();
@@ -130,6 +142,7 @@ const grid = new THREE.GridHelper(220, 22, 0x2c2c2c, 0x151515);
 grid.position.set(0, -0.8, -55);
 grid.material.transparent = true;
 grid.material.opacity = 0.48;
+grid.visible = state.showGrid;
 visualRoot.add(grid);
 
 const horizonGeometry = new THREE.BufferGeometry().setFromPoints([
@@ -202,7 +215,7 @@ function initializeAudioGraph() {
 
   state.audioContext = new AudioContextClass();
   state.analyser = state.audioContext.createAnalyser();
-  state.analyser.fftSize = 2048;
+  state.analyser.fftSize = state.fftSize;
   state.analyser.minDecibels = -92;
   state.analyser.maxDecibels = -8;
   state.analyser.smoothingTimeConstant = state.smoothing;
@@ -238,30 +251,52 @@ function clearLineGroup() {
 
 function makeLineMaterial(index, total) {
   const age = index / Math.max(1, total - 1);
-  const material = new THREE.LineBasicMaterial({
+  const material = new THREE.MeshBasicMaterial({
     color: new THREE.Color(state.lineColor),
     transparent: true,
     opacity: state.lineOpacity * (1 - age * 0.7),
     depthWrite: false,
     blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide,
   });
   material.toneMapped = false;
   return material;
 }
 
 function makeLineGeometry() {
-  const positions = new Float32Array(state.frequencyBins * 3);
+  const positions = new Float32Array(state.frequencyBins * 2 * 3);
+  const indices = new Uint16Array(Math.max(0, state.frequencyBins - 1) * 6);
   const xSpan = 118;
+  const halfWidth = state.lineWidth / 2;
 
   for (let i = 0; i < state.frequencyBins; i += 1) {
     const ratio = i / Math.max(1, state.frequencyBins - 1);
-    positions[i * 3] = (ratio - 0.5) * xSpan;
-    positions[i * 3 + 1] = 0;
-    positions[i * 3 + 2] = 0;
+    const x = (ratio - 0.5) * xSpan;
+    const upper = i * 6;
+    const lower = upper + 3;
+
+    positions[upper] = x;
+    positions[upper + 1] = halfWidth;
+    positions[upper + 2] = 0;
+    positions[lower] = x;
+    positions[lower + 1] = -halfWidth;
+    positions[lower + 2] = 0;
+  }
+
+  for (let i = 0; i < state.frequencyBins - 1; i += 1) {
+    const vertex = i * 2;
+    const offset = i * 6;
+    indices[offset] = vertex;
+    indices[offset + 1] = vertex + 1;
+    indices[offset + 2] = vertex + 2;
+    indices[offset + 3] = vertex + 1;
+    indices[offset + 4] = vertex + 3;
+    indices[offset + 5] = vertex + 2;
   }
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setIndex(new THREE.BufferAttribute(indices, 1));
   return geometry;
 }
 
@@ -274,7 +309,7 @@ function rebuildSpectrogram() {
 
   const depthSpan = 142;
   for (let i = 0; i < state.historyLines; i += 1) {
-    const line = new THREE.Line(makeLineGeometry(), makeLineMaterial(i, state.historyLines));
+    const line = new THREE.Mesh(makeLineGeometry(), makeLineMaterial(i, state.historyLines));
     line.position.z = -(i / Math.max(1, state.historyLines - 1)) * depthSpan;
     line.frustumCulled = false;
     state.lines.push(line);
@@ -286,10 +321,14 @@ function rebuildSpectrogram() {
 }
 
 function resetSpectrogramData() {
+  const halfWidth = state.lineWidth / 2;
   for (const line of state.lines) {
     const positions = line.geometry.attributes.position.array;
     for (let i = 0; i < state.frequencyBins; i += 1) {
-      positions[i * 3 + 1] = 0;
+      const upper = i * 6 + 1;
+      const lower = upper + 3;
+      positions[upper] = halfWidth;
+      positions[lower] = -halfWidth;
     }
     line.geometry.attributes.position.needsUpdate = true;
   }
@@ -383,11 +422,16 @@ function analyzeFrame() {
   const positions = recycled.geometry.attributes.position.array;
   const beatBoost = state.beatPulse ? state.beatFlash * 0.16 : 0;
 
+  const halfWidth = state.lineWidth / 2;
   for (let i = 0; i < state.frequencyBins; i += 1) {
     const value = spectrum[i];
     const shaped = Math.pow(value, 1.7);
     const bassBias = 1 + (1 - i / Math.max(1, state.frequencyBins - 1)) * beatBoost;
-    positions[i * 3 + 1] = shaped * state.heightScale * bassBias;
+    const height = shaped * state.heightScale * bassBias;
+    const upper = i * 6 + 1;
+    const lower = upper + 3;
+    positions[upper] = height + halfWidth;
+    positions[lower] = height - halfWidth;
   }
 
   recycled.geometry.attributes.position.needsUpdate = true;
@@ -402,6 +446,27 @@ function analyzeFrame() {
     line.material.color.copy(color);
     line.material.opacity = state.lineOpacity * (1 - age * 0.7);
   }
+}
+
+function updateLineWidths() {
+  const halfWidth = state.lineWidth / 2;
+
+  for (const line of state.lines) {
+    const positions = line.geometry.attributes.position.array;
+    for (let i = 0; i < state.frequencyBins; i += 1) {
+      const upper = i * 6 + 1;
+      const lower = upper + 3;
+      const center = (positions[upper] + positions[lower]) / 2;
+      positions[upper] = center + halfWidth;
+      positions[lower] = center - halfWidth;
+    }
+    line.geometry.attributes.position.needsUpdate = true;
+  }
+}
+
+function updateFpsVisibility() {
+  dom.fpsBlock.classList.toggle("is-hidden", !state.showFps);
+  dom.fpsBlock.setAttribute("aria-hidden", String(!state.showFps));
 }
 
 function updateVisualDynamics(delta) {
@@ -456,6 +521,17 @@ function animate(now) {
 
   const delta = Math.min(0.05, (now - state.lastFrameTime) / 1000);
   state.lastFrameTime = now;
+
+  if (state.showFps) {
+    state.fpsFrameCount += 1;
+    const fpsElapsed = now - state.fpsLastUpdate;
+    if (fpsElapsed >= 500) {
+      state.currentFps = state.fpsFrameCount * 1000 / fpsElapsed;
+      dom.fpsReadout.textContent = String(Math.round(state.currentFps));
+      state.fpsFrameCount = 0;
+      state.fpsLastUpdate = now;
+    }
+  }
 
   if (state.isPlaying && now >= state.nextAnalysisTime) {
     analyzeFrame();
@@ -558,6 +634,9 @@ function bindControl(name, definition) {
     if (name === "smoothing" && state.analyser) {
       state.analyser.smoothingTimeConstant = state.smoothing;
     }
+    if (name === "lineWidth") {
+      updateLineWidths();
+    }
     if (name === "lineOpacity") {
       for (let i = 0; i < state.lines.length; i += 1) {
         const age = i / Math.max(1, state.lines.length - 1);
@@ -587,6 +666,10 @@ function resetVisualControls() {
     output.textContent = definition.format(DEFAULTS[name]);
     setRangeFill(input);
   }
+
+  dom.fftSize.value = String(DEFAULTS.fftSize);
+  state.fftSize = DEFAULTS.fftSize;
+  applyFftSize();
 
   dom.lineColor.value = DEFAULTS.lineColor;
   state.lineColor = DEFAULTS.lineColor;
@@ -629,8 +712,69 @@ for (const name of toggleNames) {
   input.addEventListener("change", () => {
     state[name] = input.checked;
     if (name === "showGrid") grid.visible = state.showGrid;
+    if (name === "showFps") {
+      state.fpsFrameCount = 0;
+      state.fpsLastUpdate = performance.now();
+      dom.fpsReadout.textContent = "0";
+      updateFpsVisibility();
+    }
   });
 }
+
+function applyFftSize() {
+  if (state.analyser) {
+    state.analyser.fftSize = state.fftSize;
+    state.frequencyData = new Uint8Array(state.analyser.frequencyBinCount);
+    state.waveformData = new Uint8Array(state.analyser.fftSize);
+  }
+  dom.fftReadout.textContent = String(state.fftSize);
+}
+
+function exportSettingsJson() {
+  const settings = {};
+  for (const name of Object.keys(DEFAULTS)) settings[name] = state[name];
+  settings.volume = Number(dom.volume.value);
+
+  const payload = {
+    app: "3D Spectrogram",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    settings,
+  };
+
+  const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const date = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = `3d-spectrogram-settings-${date}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function initializeCollapsiblePanels() {
+  for (const panel of document.querySelectorAll("[data-collapsible]")) {
+    const button = panel.querySelector(".panel__toggle");
+    const content = panel.querySelector(".panel__content");
+    if (!button || !content) continue;
+
+    button.addEventListener("click", () => {
+      const isCollapsed = panel.classList.toggle("is-collapsed");
+      button.setAttribute("aria-expanded", String(!isCollapsed));
+      content.setAttribute("aria-hidden", String(isCollapsed));
+      content.inert = isCollapsed;
+    });
+  }
+}
+
+dom.fftSize.addEventListener("change", () => {
+  state.fftSize = Number(dom.fftSize.value);
+  applyFftSize();
+});
+
+dom.exportSettings.addEventListener("click", exportSettingsJson);
 
 dom.lineColor.addEventListener("input", () => {
   state.lineColor = dom.lineColor.value;
@@ -788,6 +932,9 @@ for (const input of document.querySelectorAll(".range")) setRangeFill(input);
 dom.volumeValue.textContent = `${Math.round(Number(dom.volume.value) * 100)}%`;
 dom.lineColorValue.textContent = state.lineColor.toUpperCase();
 document.documentElement.style.setProperty("--accent", state.lineColor);
+grid.visible = state.showGrid;
+updateFpsVisibility();
+initializeCollapsiblePanels();
 setTransportEnabled(false);
 updatePlaybackUi();
 rebuildSpectrogram();
