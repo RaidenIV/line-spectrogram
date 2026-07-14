@@ -1,22 +1,20 @@
 # Real-Time 3D Spectrogram
 
-Browser-based rewrite of the original Python/PyQtGraph visualizer using Three.js and the Web Audio API. The required Three.js module and OrbitControls files are included in `vendor/`, so the visualizer does not depend on a Three.js CDN at runtime.
+Browser-based rewrite of the original Python/PyQtGraph visualizer using Three.js and the Web Audio API. Three.js and OrbitControls are included locally in `vendor/`, so the visualizer does not require a Three.js CDN at runtime.
 
 ## Run locally
 
-Because the app uses JavaScript modules, serve the folder through a local web server instead of opening `index.html` directly.
+Extract the project and open `index.html` directly in a modern browser. The production scripts are bundled as classic browser scripts, so a local web server is not required.
 
-### Python
+You can also host the folder on GitHub Pages, Railway, Netlify, or any static web server without changing the project files.
 
-```bash
-python -m http.server 8000
-```
+## Load audio
 
-Then open `http://localhost:8000`.
+1. Click **Load audio file** or drag an audio file onto the page.
+2. Wait for the source status to change from **LOADING** to **READY**.
+3. Press the play button or the Spacebar to begin playback and real-time analysis.
 
-### VS Code
-
-Open the folder and use the **Live Server** extension on `index.html`.
+Supported file types depend on the browser's built-in audio decoders. WAV, MP3, M4A/AAC, OGG, OPUS, and FLAC are accepted by the interface.
 
 ## Features
 

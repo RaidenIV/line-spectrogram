@@ -1,5 +1,11 @@
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+(function () {
+"use strict";
+
+const THREE = window.THREE;
+if (!THREE || !THREE.OrbitControls) {
+  throw new Error("Three.js failed to initialize. Make sure the vendor files are present.");
+}
+const { OrbitControls } = THREE;
 
 const DEFAULTS = Object.freeze({
   heightScale: 42,
@@ -48,6 +54,9 @@ const dom = {
   fullscreenButton: document.querySelector("#fullscreenButton"),
   resetVisuals: document.querySelector("#resetVisuals"),
   resetCamera: document.querySelector("#resetCamera"),
+  lineColor: document.querySelector("#lineColor"),
+  lineColorValue: document.querySelector("#lineColorValue"),
+  autoCamera: document.querySelector("#autoCamera"),
   fftReadout: document.querySelector("#fftReadout"),
   binsReadout: document.querySelector("#binsReadout"),
   energyReadout: document.querySelector("#energyReadout"),
@@ -490,33 +499,49 @@ function stopPlayback() {
   updateSeekUi();
 }
 
-async function loadAudioFile(file) {
-  if (!file || (!file.type.startsWith("audio/") && !/\.(wav|mp3|m4a|aac|flac|ogg|opus)$/i.test(file.name))) {
+function loadAudioFile(file) {
+  const supportedExtension = /\.(wav|mp3|m4a|aac|flac|ogg|opus)$/i.test(file?.name || "");
+  const supportedMime = Boolean(file?.type && file.type.startsWith("audio/"));
+
+  if (!file || (!supportedMime && !supportedExtension)) {
     dom.liveStatus.textContent = "UNSUPPORTED FILE";
+    dom.audioStatus.textContent = "ERROR";
     return;
   }
 
-  if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
+  dom.audio.pause();
+  state.isPlaying = false;
+  state.hasAudio = false;
+  setTransportEnabled(false);
+  updatePlaybackUi();
+
+  if (state.objectUrl) {
+    URL.revokeObjectURL(state.objectUrl);
+  }
+
   state.objectUrl = URL.createObjectURL(file);
+  dom.audio.preload = "auto";
   dom.audio.src = state.objectUrl;
-  dom.audio.load();
   dom.audio.volume = Number(dom.volume.value);
 
-  state.hasAudio = true;
-  state.isPlaying = false;
-  setTransportEnabled(true);
+  dom.audioStatus.textContent = "LOADING";
+  dom.audioStatus.classList.remove("is-ready");
+  dom.liveStatus.textContent = "LOADING AUDIO";
   dom.emptyState.classList.add("is-hidden");
   dom.trackName.textContent = file.name.replace(/\.[^.]+$/, "");
   dom.trackDetails.textContent = `${file.name.split(".").pop().toUpperCase()} • ${formatBytes(file.size)}`;
-  updatePlaybackUi();
   resetSpectrogramData();
+  dom.audio.load();
+}
 
-  try {
-    await ensureAudioContextRunning();
-  } catch (error) {
-    console.error(error);
-    dom.liveStatus.textContent = "AUDIO API UNAVAILABLE";
-  }
+function markAudioReady() {
+  if (!dom.audio.src) return;
+  state.hasAudio = true;
+  state.isPlaying = !dom.audio.paused;
+  setTransportEnabled(true);
+  updatePlaybackUi();
+  dom.duration.textContent = formatTime(dom.audio.duration);
+  updateSeekUi();
 }
 
 function bindControl(name, definition) {
@@ -656,10 +681,8 @@ const commitSeek = () => {
 dom.seek.addEventListener("change", commitSeek);
 dom.seek.addEventListener("pointerup", commitSeek);
 
-dom.audio.addEventListener("loadedmetadata", () => {
-  dom.duration.textContent = formatTime(dom.audio.duration);
-  updateSeekUi();
-});
+dom.audio.addEventListener("loadedmetadata", markAudioReady);
+dom.audio.addEventListener("canplay", markAudioReady);
 
 dom.audio.addEventListener("timeupdate", updateSeekUi);
 dom.audio.addEventListener("play", () => {
@@ -680,8 +703,12 @@ dom.audio.addEventListener("ended", () => {
 
 dom.audio.addEventListener("error", () => {
   state.isPlaying = false;
-  dom.liveStatus.textContent = "DECODE ERROR";
+  state.hasAudio = false;
+  setTransportEnabled(false);
+  const errorCode = dom.audio.error?.code;
+  dom.liveStatus.textContent = errorCode === 4 ? "FORMAT NOT SUPPORTED" : "DECODE ERROR";
   dom.audioStatus.textContent = "ERROR";
+  dom.audioStatus.classList.remove("is-ready");
   dom.trackCard.classList.remove("is-playing");
 });
 
@@ -766,3 +793,5 @@ updatePlaybackUi();
 rebuildSpectrogram();
 resizeRenderer();
 requestAnimationFrame(animate);
+
+})();

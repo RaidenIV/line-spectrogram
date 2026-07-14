@@ -15,14 +15,6 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./style.css" />
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "./vendor/three.module.js",
-          "three/addons/": "./vendor/"
-        }
-      }
-    </script>
   </head>
   <body>
     <div class="app-shell">
@@ -301,6 +293,8 @@
       </main>
     </div>
 
-    <script type="module" src="./app.js"></script>
+    <script src="./vendor/three.global.js"></script>
+    <script src="./vendor/controls/OrbitControls.global.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>
