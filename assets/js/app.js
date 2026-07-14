@@ -28,6 +28,7 @@
       state.nextAnalysisTime = now + 1000 / Math.max(1, state.scrollSpeed);
     }
 
+    App.loop.enforceSelectedLoop();
     App.analysis.updateVisualDynamics(delta);
     controls.update();
     App.renderer.renderLive();
@@ -44,7 +45,7 @@
 
     elements.playButton.addEventListener("click", App.playback.togglePlayback);
     elements.stopButton.addEventListener("click", App.playback.stopPlayback);
-    elements.loopButton.addEventListener("click", () => App.playback.setLoop(!elements.audio.loop));
+    elements.loopButton.addEventListener("click", App.loop.openEditor);
 
     elements.volume.addEventListener("input", () => App.playback.setVolume(elements.volume.value));
     elements.muteToggle.addEventListener("change", () => App.playback.setMuted(elements.muteToggle.checked));
@@ -56,16 +57,16 @@
     elements.seek.addEventListener("change", App.playback.commitSeek);
     elements.seek.addEventListener("pointerup", App.playback.commitSeek);
 
-    elements.audio.addEventListener("loadedmetadata", App.loader.markAudioReady);
-    elements.audio.addEventListener("canplay", App.loader.markAudioReady);
-    elements.audio.addEventListener("timeupdate", App.playback.updateSeekUi);
+    elements.audio.addEventListener("timeupdate", () => {
+      App.loop.enforceSelectedLoop();
+      App.playback.updateSeekUi();
+    });
     elements.audio.addEventListener("play", App.playback.handlePlay);
     elements.audio.addEventListener("pause", App.playback.handlePause);
     elements.audio.addEventListener("ended", () => {
       App.playback.handlePause();
       App.exporting.handleAudioEnded();
     });
-    elements.audio.addEventListener("error", App.loader.handleAudioError);
   }
 
   function bindViewportEvents() {
@@ -114,6 +115,8 @@
       const target = event.target;
       const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement;
 
+      if (document.getElementById("loopEditorOverlay")) return;
+
       if (event.code === "Space" && !isTyping) {
         event.preventDefault();
         App.playback.togglePlayback();
@@ -143,6 +146,7 @@
 
     window.addEventListener("beforeunload", () => {
       observer?.disconnect();
+      App.loop.closeEditor();
       if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
       if (state.exportActive) App.exporting.stopVideoExport(true);
     });
@@ -158,6 +162,7 @@
     App.playback.setVolume(DEFAULTS.volume);
     App.playback.setMuted(DEFAULTS.muted);
     App.playback.setLoop(false);
+    App.loop.syncLoopButton();
     App.playback.setTransportEnabled(false);
     App.playback.updatePlaybackUi();
 

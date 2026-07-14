@@ -15,6 +15,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="./assets/css/loop-editor.css" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -86,7 +87,7 @@
                 <button class="transport__button transport__button--primary" id="playButton" type="button" aria-label="Play" disabled>
                   <span class="play-icon" id="playIcon" aria-hidden="true"></span>
                 </button>
-                <button class="transport__button" id="loopButton" type="button" aria-label="Toggle loop" aria-pressed="false" disabled>
+                <button class="transport__button" id="loopButton" type="button" aria-label="Open loop editor" aria-pressed="false" disabled>
                   <span aria-hidden="true">↻</span>
                 </button>
               </div>
@@ -469,6 +470,7 @@
     <script src="./assets/js/utils.js"></script>
     <script src="./assets/js/analysis.js"></script>
     <script src="./assets/js/playback.js"></script>
+    <script src="./assets/js/loop.js"></script>
     <script src="./assets/js/loader.js"></script>
     <script src="./assets/js/renderer.js"></script>
     <script src="./assets/js/hud.js"></script>

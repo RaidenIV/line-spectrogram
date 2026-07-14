@@ -24,8 +24,9 @@
   function setTransportEnabled(enabled) {
     elements.playButton.disabled = !enabled;
     elements.stopButton.disabled = !enabled;
-    elements.loopButton.disabled = !enabled;
     elements.seek.disabled = !enabled;
+    if (!enabled) elements.loopButton.disabled = true;
+    else App.loop?.syncLoopButton();
   }
 
   function initializeAudioGraph() {
@@ -59,13 +60,50 @@
     if (state.audioContext.state === "suspended") await state.audioContext.resume();
   }
 
+  async function decodeAudioData(arrayBuffer) {
+    initializeAudioGraph();
+    const source = arrayBuffer.slice(0);
+
+    // Safari still supports the callback form while modern browsers return a
+    // Promise. This wrapper handles both without decoding the same file twice.
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const complete = (buffer) => {
+        if (settled) return;
+        settled = true;
+        resolve(buffer);
+      };
+      const fail = (error) => {
+        if (settled) return;
+        settled = true;
+        reject(error instanceof Error ? error : new Error("The audio file could not be decoded."));
+      };
+
+      try {
+        const result = state.audioContext.decodeAudioData(source, complete, fail);
+        if (result && typeof result.then === "function") result.then(complete, fail);
+      } catch (error) {
+        fail(error);
+      }
+    });
+  }
+
   async function togglePlayback() {
     if (!state.hasAudio || state.exportActive) return;
 
     try {
       await ensureAudioContextRunning();
-      if (elements.audio.paused) await elements.audio.play();
-      else elements.audio.pause();
+      if (elements.audio.paused) {
+        if (state.audioLoop && App.loop?.hasPartialLoopSelection()) {
+          const range = App.loop.getSelectedLoopRange();
+          if (elements.audio.currentTime < range.start || elements.audio.currentTime >= range.end) {
+            elements.audio.currentTime = range.start;
+          }
+        }
+        await elements.audio.play();
+      } else {
+        elements.audio.pause();
+      }
     } catch (error) {
       console.error(error);
       elements.liveStatus.textContent = "PLAYBACK ERROR";
@@ -75,7 +113,10 @@
   function stopPlayback() {
     if (state.exportActive) return;
     elements.audio.pause();
-    elements.audio.currentTime = 0;
+    const resetTime = state.audioLoop && App.loop?.hasPartialLoopSelection()
+      ? App.loop.getSelectedLoopRange().start
+      : 0;
+    elements.audio.currentTime = resetTime;
     App.analysis.resetSpectrogramData();
     updateSeekUi();
   }
@@ -119,8 +160,9 @@
   }
 
   function setLoop(enabled) {
-    elements.audio.loop = Boolean(enabled);
-    elements.loopButton.setAttribute("aria-pressed", String(elements.audio.loop));
+    state.audioLoop = Boolean(enabled);
+    App.loop?.updateAudioLoopMode();
+    App.loop?.syncLoopButton();
   }
 
   function handlePlay() {
@@ -139,6 +181,7 @@
     setTransportEnabled,
     initializeAudioGraph,
     ensureAudioContextRunning,
+    decodeAudioData,
     togglePlayback,
     stopPlayback,
     updateSeekUi,

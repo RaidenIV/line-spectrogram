@@ -121,8 +121,14 @@
     if (!snapshot) return;
 
     elements.audio.pause();
-    elements.audio.loop = snapshot.loop;
-    elements.loopButton.setAttribute("aria-pressed", String(snapshot.loop));
+    state.audioLoop = snapshot.audioLoop;
+    state.loopStart = snapshot.loopStart;
+    state.loopEnd = snapshot.loopEnd;
+    state.loopBpm = snapshot.loopBpm;
+    state.loopBars = snapshot.loopBars;
+    state.loopSnap = snapshot.loopSnap;
+    App.loop.updateAudioLoopMode();
+    App.loop.syncLoopButton();
     if (Number.isFinite(elements.audio.duration)) {
       elements.audio.currentTime = Math.min(snapshot.currentTime, elements.audio.duration || snapshot.currentTime);
     }
@@ -220,7 +226,12 @@
       playbackSnapshot = {
         currentTime: elements.audio.currentTime,
         paused: elements.audio.paused,
-        loop: elements.audio.loop,
+        audioLoop: state.audioLoop,
+        loopStart: state.loopStart,
+        loopEnd: state.loopEnd,
+        loopBpm: state.loopBpm,
+        loopBars: state.loopBars,
+        loopSnap: state.loopSnap,
       };
 
       state.exportActive = true;
@@ -229,8 +240,9 @@
       setExportControlsDisabled(true);
       elements.exportVideo.textContent = "CANCEL VIDEO EXPORT";
       elements.exportVideo.classList.add("is-recording");
+      state.audioLoop = false;
       elements.audio.loop = false;
-      elements.loopButton.setAttribute("aria-pressed", "false");
+      App.loop.syncLoopButton();
       elements.audio.pause();
       elements.audio.currentTime = 0;
       App.analysis.resetSpectrogramData();

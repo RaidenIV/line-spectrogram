@@ -1,0 +1,527 @@
+.transport__button.loop-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+}
+
+.loop-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.loop-editor {
+  width: min(1080px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.62);
+}
+
+.loop-editor__header,
+.loop-editor__section-header,
+.loop-editor__time-row,
+.loop-editor__stats,
+.loop-editor__actions,
+.loop-editor__transport,
+.loop-editor__volume-row,
+.loop-editor__toggle-row,
+.loop-editor__field,
+.loop-editor__stepper {
+  display: flex;
+  align-items: center;
+}
+
+.loop-editor__header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(11, 11, 11, 0.96);
+  backdrop-filter: blur(14px);
+}
+
+.loop-editor__header h2 {
+  font-size: 1.15rem;
+}
+
+.loop-editor__eyebrow,
+.loop-editor__label,
+.loop-editor__section-header,
+.loop-editor__time-row,
+.loop-editor__stats,
+.loop-editor__range-info,
+.loop-editor__zoom-controls,
+.loop-editor__field span,
+.loop-editor__stepper span,
+.loop-editor__volume-row output {
+  font-family: var(--font-mono);
+  letter-spacing: 0.07em;
+}
+
+.loop-editor__eyebrow {
+  margin: 0 0 5px;
+  color: var(--accent);
+  font-size: 0.58rem;
+}
+
+.loop-editor__icon-button,
+.loop-editor__zoom-controls button,
+.loop-editor__button,
+.loop-editor__stepper button,
+.loop-editor__volume-row button,
+.loop-editor__minimap,
+.loop-editor__progress {
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+
+.loop-editor__icon-button:hover,
+.loop-editor__zoom-controls button:hover,
+.loop-editor__button:hover,
+.loop-editor__stepper button:hover,
+.loop-editor__volume-row button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.loop-editor__icon-button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 7px;
+  font-size: 1.1rem;
+}
+
+.loop-editor__wave-section {
+  padding: 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.loop-editor__section-header {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.loop-editor__zoom-controls {
+  display: grid;
+  grid-template-columns: 30px 54px 30px 46px;
+  align-items: center;
+  gap: 5px;
+}
+
+.loop-editor__zoom-controls button,
+.loop-editor__zoom-controls output {
+  display: grid;
+  place-items: center;
+  height: 28px;
+  border-radius: 5px;
+  font-size: 0.6rem;
+}
+
+.loop-editor__zoom-controls output {
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: #080808;
+}
+
+.loop-editor__waveform {
+  position: relative;
+  height: 260px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: #080808;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.loop-editor__waveform canvas,
+.loop-editor__minimap canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.loop-editor__playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
+  width: 1px;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.loop-editor__handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 5;
+  width: 18px;
+  padding: 0;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  cursor: ew-resize;
+  transform: translateX(-50%);
+  touch-action: none;
+}
+
+.loop-editor__handle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  background: var(--accent);
+  transform: translateX(-50%);
+}
+
+.loop-editor__handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, #fff);
+  border-radius: 3px;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.loop-editor__handle span {
+  position: absolute;
+  top: 8px;
+  padding: 4px 6px;
+  border: 1px solid color-mix(in srgb, var(--accent) 65%, #252525);
+  border-radius: 4px;
+  color: var(--text);
+  background: rgba(11, 11, 11, 0.94);
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  white-space: nowrap;
+}
+
+.loop-editor__handle--start span {
+  left: 10px;
+}
+
+.loop-editor__handle--end span {
+  right: 10px;
+}
+
+.loop-editor__analysis {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  background: rgba(5, 5, 5, 0.78);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+}
+
+.loop-editor__analysis[hidden] {
+  display: none;
+}
+
+.loop-editor__analysis-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.loop-editor__analysis-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: loop-dot 800ms ease-in-out infinite alternate;
+}
+
+.loop-editor__analysis-dots i:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.loop-editor__analysis-dots i:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+@keyframes loop-dot {
+  from { opacity: 0.25; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(-5px); }
+}
+
+.loop-editor__minimap {
+  display: block;
+  width: 100%;
+  height: 54px;
+  margin-top: 10px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.loop-editor__progress {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 5px;
+  margin-top: 10px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #202020;
+}
+
+.loop-editor__progress span {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: var(--accent);
+}
+
+.loop-editor__time-row {
+  justify-content: space-between;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.loop-editor__controls {
+  display: grid;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr;
+  gap: 1px;
+  border-bottom: 1px solid var(--border);
+  background: var(--border);
+}
+
+.loop-editor__control-block {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 20px 22px;
+  background: var(--surface);
+}
+
+.loop-editor__label {
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.loop-editor__transport {
+  gap: 8px;
+}
+
+.loop-editor__button {
+  min-height: 36px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.loop-editor__button--primary,
+.loop-editor__button.is-playing {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.loop-editor__button--accent {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+}
+
+.loop-editor__button--accent:hover {
+  color: #fff;
+  background: color-mix(in srgb, var(--accent) 88%, #fff);
+}
+
+.loop-editor__toggle-row {
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 32px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.loop-editor__toggle-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+}
+
+.loop-editor__volume-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 42px;
+  gap: 9px;
+}
+
+.loop-editor__volume-row button {
+  height: 30px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+}
+
+.loop-editor__volume-row button.is-muted {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.loop-editor__volume-row input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.loop-editor__volume-row output {
+  color: var(--muted);
+  font-size: 0.57rem;
+  text-align: right;
+}
+
+.loop-editor__field {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.loop-editor__field span {
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.loop-editor__field input,
+.loop-editor__stepper input {
+  min-width: 0;
+  height: 36px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+
+.loop-editor__field input {
+  width: 100px;
+}
+
+.loop-editor__stepper {
+  display: grid;
+  grid-template-columns: 36px 70px auto 36px;
+  gap: 6px;
+}
+
+.loop-editor__stepper button {
+  height: 36px;
+  border-radius: 6px;
+}
+
+.loop-editor__stepper span {
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.loop-editor__range-info {
+  color: var(--muted);
+  font-size: 0.58rem;
+  line-height: 1.6;
+}
+
+.loop-editor__stats {
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.55rem;
+}
+
+.loop-editor__stats strong {
+  margin-left: 5px;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.loop-editor__actions {
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 18px 22px;
+}
+
+.loop-editor__actions .loop-editor__button {
+  min-width: 118px;
+}
+
+@media (max-width: 900px) {
+  .loop-editor-overlay {
+    padding: 12px;
+  }
+
+  .loop-editor {
+    max-height: calc(100vh - 24px);
+  }
+
+  .loop-editor__waveform {
+    height: 220px;
+  }
+
+  .loop-editor__controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .loop-editor__header,
+  .loop-editor__wave-section,
+  .loop-editor__control-block,
+  .loop-editor__actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .loop-editor__section-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .loop-editor__waveform {
+    height: 190px;
+  }
+
+  .loop-editor__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .loop-editor__actions .loop-editor__button {
+    width: 100%;
+  }
+}
