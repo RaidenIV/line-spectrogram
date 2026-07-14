@@ -93,6 +93,9 @@
                 </button>
               </div>
 
+              <button class="action-button loop-editor-launch" id="loopEditorButton" type="button" disabled>LOOP EDITOR UNAVAILABLE</button>
+              <p class="loop-status" id="loopStatus" data-tone="idle" aria-live="polite">Load and analyze audio to create a loop.</p>
+
               <div class="timeline">
                 <div class="timeline__times">
                   <span id="currentTime">0:00</span>
@@ -422,12 +425,23 @@
           <span>WHEEL: ZOOM</span>
           <span>SPACEBAR: PLAY/PAUSE</span>
         </footer>
+
+        <div class="sidebar-logo" aria-label="Spectrogramic logo">
+          <img src="./assets/images/spectrogramic-logo.svg" alt="" aria-hidden="true" />
+        </div>
       </aside>
 
       <main class="viewport" id="viewport">
         <div class="viewport-frame" id="viewportFrame">
           <canvas id="visualizer" aria-label="Real-time 3D spectrogram"></canvas>
           <canvas id="hudCanvas" class="hud-canvas" aria-hidden="true"></canvas>
+          <img
+            id="viewportLogo"
+            class="viewport-logo"
+            src="./assets/images/spectrogramic-logo.svg"
+            alt=""
+            aria-hidden="true"
+          />
 
           <div class="empty-state" id="emptyState">
             <div class="empty-state__mark" aria-hidden="true">

@@ -46,6 +46,7 @@
     elements.playButton.addEventListener("click", App.playback.togglePlayback);
     elements.stopButton.addEventListener("click", App.playback.stopPlayback);
     elements.loopButton.addEventListener("click", App.loop.openEditor);
+    elements.loopEditorButton.addEventListener("click", App.loop.openEditor);
 
     elements.volume.addEventListener("input", () => App.playback.setVolume(elements.volume.value));
     elements.muteToggle.addEventListener("change", () => App.playback.setMuted(elements.muteToggle.checked));

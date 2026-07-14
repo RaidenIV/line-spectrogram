@@ -191,6 +191,7 @@
 
     try {
       await App.playback.ensureAudioContextRunning();
+      await App.hud.ensureLogoReady();
       const { width, height } = parseResolution(elements.exportResolution.value);
       const fps = Number(elements.videoFps.value);
       const bitrate = Number(elements.videoBitrate.value);
@@ -298,13 +299,14 @@
     if (state.exportActive) stopVideoExport(false);
   }
 
-  function exportPng() {
+  async function exportPng() {
     if (state.exportActive || pngExportActive) return;
     let pngRenderer = null;
     let pngCanvas = null;
     setPngExportActive(true);
     setStatus(elements.exportStatus, "Preparing PNG export...");
     try {
+      await App.hud.ensureLogoReady();
       const { width, height } = parseResolution(elements.exportResolution.value);
       pngRenderer = createExportRenderer(width, height);
       pngCanvas = createCompositeCanvas(width, height);

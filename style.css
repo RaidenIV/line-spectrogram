@@ -1107,7 +1107,8 @@ h2 {
 
 .app-shell.sidebar-collapsed .sidebar__header,
 .app-shell.sidebar-collapsed .sidebar > .panel,
-.app-shell.sidebar-collapsed .sidebar__footer {
+.app-shell.sidebar-collapsed .sidebar__footer,
+.app-shell.sidebar-collapsed .sidebar-logo {
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -1274,7 +1275,8 @@ h2 {
 
   .app-shell.sidebar-collapsed .sidebar__header,
   .app-shell.sidebar-collapsed .sidebar > .panel,
-  .app-shell.sidebar-collapsed .sidebar__footer {
+  .app-shell.sidebar-collapsed .sidebar__footer,
+  .app-shell.sidebar-collapsed .sidebar-logo {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
@@ -1290,4 +1292,35 @@ h2 {
   .button-row {
     grid-template-columns: 1fr;
   }
+}
+
+/* Spectrogramic logo artwork copied from the reference voxel-engine project. */
+.sidebar-logo {
+  width: min(140.625px, 48.75%);
+  margin: 0 auto 24px;
+  padding-top: 6px;
+  opacity: 0.92;
+  line-height: 0;
+  pointer-events: none;
+}
+
+.sidebar-logo img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.viewport-logo {
+  position: absolute;
+  z-index: 3;
+  display: block;
+  height: auto;
+  opacity: 0.92;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+
+.viewport-logo.is-hidden {
+  display: none;
 }

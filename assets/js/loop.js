@@ -64,9 +64,17 @@
     elements.audio.loop = Boolean(state.audioLoop && !hasPartialLoopSelection());
   }
 
+  function setLoopStatus(message, tone = "idle") {
+    if (!elements.loopStatus) return;
+    elements.loopStatus.textContent = message;
+    elements.loopStatus.dataset.tone = tone;
+  }
+
   function syncLoopButton() {
-    const enabled = Boolean(state.loopReady && state.decodedAudioBuffer && getTrackDuration() > 0);
-    const active = Boolean(enabled && state.audioLoop);
+    const duration = getTrackDuration();
+    const range = getSelectedLoopRange();
+    const enabled = Boolean(state.loopReady && state.decodedAudioBuffer && duration > 0);
+    const active = Boolean(enabled && state.audioLoop && hasPartialLoopSelection());
 
     elements.loopButton.disabled = !enabled;
     elements.loopButton.classList.toggle("loop-active", active);
@@ -78,6 +86,31 @@
     elements.loopButton.title = enabled
       ? (active ? "Edit active loop region" : "Open loop editor")
       : "Load a decodable audio file to create a loop";
+
+    if (elements.loopEditorButton) {
+      elements.loopEditorButton.disabled = !enabled;
+      elements.loopEditorButton.classList.toggle("is-active", active);
+      elements.loopEditorButton.textContent = !enabled
+        ? "LOOP EDITOR UNAVAILABLE"
+        : active
+          ? "EDIT ACTIVE LOOP"
+          : "OPEN LOOP EDITOR";
+      elements.loopEditorButton.setAttribute("aria-pressed", String(active));
+      elements.loopEditorButton.title = elements.loopButton.title;
+    }
+
+    if (!enabled) {
+      setLoopStatus("Load and analyze audio to create a loop.", "idle");
+    } else if (!state.audioLoop) {
+      setLoopStatus("Loop off. Open the editor to select a region.", "idle");
+    } else if (active) {
+      setLoopStatus(
+        `Loop on · ${formatTime(range.start)}–${formatTime(range.end)} · ${range.duration.toFixed(2)} s`,
+        "active"
+      );
+    } else {
+      setLoopStatus("Full-track loop enabled.", "active");
+    }
   }
 
   function buildWaveformPeaks(buffer, peakCount = DEFAULT_PEAK_COUNT) {
@@ -1098,7 +1131,7 @@
     modal.remove();
     modal = null;
     editor = null;
-    elements.loopButton.focus();
+    (elements.loopEditorButton || elements.loopButton).focus();
   }
 
   App.loop = {

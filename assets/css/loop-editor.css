@@ -525,3 +525,32 @@
     width: 100%;
   }
 }
+
+/* Loop editor entry/status — mirrors the reference engine's explicit loop workflow. */
+.loop-editor-launch {
+  margin-top: 0;
+}
+
+.loop-editor-launch.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+}
+
+.loop-status {
+  min-height: 30px;
+  margin: 8px 0 16px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  line-height: 1.45;
+}
+
+.loop-status[data-tone="active"] {
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+  color: var(--accent);
+}
