@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="A real-time, audio-reactive 3D spectrogram built with Three.js and the Web Audio API."
+    />
+    <title>3D Spectrogram</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./vendor/three.module.js",
+          "three/addons/": "./vendor/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" id="sidebar" aria-label="Visualizer controls">
+        <header class="sidebar__header">
+          <div>
+            <p class="eyebrow">AUDIO REACTIVE / THREE.JS</p>
+            <h1>3D Spectrogram</h1>
+          </div>
+          <button class="icon-button sidebar__close" id="closeSidebar" type="button" aria-label="Close controls">
+            <span aria-hidden="true">×</span>
+          </button>
+        </header>
+
+        <section class="panel panel--upload">
+          <div class="panel__heading">
+            <div>
+              <p class="panel__index">01</p>
+              <h2>Audio Source</h2>
+            </div>
+            <span class="status-badge" id="audioStatus">NO FILE</span>
+          </div>
+
+          <label class="file-drop" id="fileDrop" for="audioFile">
+            <input id="audioFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus" />
+            <span class="file-drop__icon" aria-hidden="true">＋</span>
+            <span class="file-drop__title">Load audio file</span>
+            <span class="file-drop__copy">Choose or drop WAV, MP3, M4A, FLAC, OGG, or OPUS</span>
+          </label>
+
+          <div class="track-card" id="trackCard">
+            <div class="track-card__art" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="track-card__meta">
+              <strong id="trackName">No audio loaded</strong>
+              <span id="trackDetails">Select a local file to begin</span>
+            </div>
+          </div>
+
+          <audio id="audio" preload="metadata"></audio>
+
+          <div class="transport" aria-label="Playback controls">
+            <button class="transport__button" id="stopButton" type="button" aria-label="Stop" disabled>
+              <span class="stop-icon" aria-hidden="true"></span>
+            </button>
+            <button class="transport__button transport__button--primary" id="playButton" type="button" aria-label="Play" disabled>
+              <span class="play-icon" id="playIcon" aria-hidden="true"></span>
+            </button>
+            <button class="transport__button" id="loopButton" type="button" aria-label="Toggle loop" aria-pressed="false" disabled>
+              <span aria-hidden="true">↻</span>
+            </button>
+          </div>
+
+          <div class="timeline">
+            <div class="timeline__times">
+              <span id="currentTime">0:00</span>
+              <span id="duration">0:00</span>
+            </div>
+            <input class="range range--wide" id="seek" type="range" min="0" max="1000" value="0" disabled aria-label="Seek" />
+          </div>
+
+          <div class="control-row">
+            <label for="volume">Volume</label>
+            <output id="volumeValue" for="volume">85%</output>
+          </div>
+          <input class="range range--wide" id="volume" type="range" min="0" max="1" step="0.01" value="0.85" aria-label="Volume" />
+        </section>
+
+        <section class="panel">
+          <div class="panel__heading">
+            <div>
+              <p class="panel__index">02</p>
+              <h2>Spectrogram</h2>
+            </div>
+            <button class="text-button" id="resetVisuals" type="button">RESET</button>
+          </div>
+
+          <div class="control-grid">
+            <div class="control">
+              <div class="control-row">
+                <label for="heightScale">Height</label>
+                <output id="heightScaleValue" for="heightScale">42</output>
+              </div>
+              <input class="range" id="heightScale" type="range" min="5" max="100" step="1" value="42" />
+            </div>
+
+            <div class="control">
+              <div class="control-row">
+                <label for="historyLines">History</label>
+                <output id="historyLinesValue" for="historyLines">160</output>
+              </div>
+              <input class="range" id="historyLines" type="range" min="48" max="260" step="4" value="160" />
+            </div>
+
+            <div class="control">
+              <div class="control-row">
+                <label for="frequencyBins">Frequency detail</label>
+                <output id="frequencyBinsValue" for="frequencyBins">96</output>
+              </div>
+              <input class="range" id="frequencyBins" type="range" min="32" max="192" step="8" value="96" />
+            </div>
+
+            <div class="control">
+              <div class="control-row">
+                <label for="smoothing">Smoothing</label>
+                <output id="smoothingValue" for="smoothing">0.78</output>
+              </div>
+              <input class="range" id="smoothing" type="range" min="0" max="0.95" step="0.01" value="0.78" />
+            </div>
+
+            <div class="control">
+              <div class="control-row">
+                <label for="scrollSpeed">Scroll speed</label>
+                <output id="scrollSpeedValue" for="scrollSpeed">30 FPS</output>
+              </div>
+              <input class="range" id="scrollSpeed" type="range" min="8" max="60" step="1" value="30" />
+            </div>
+
+            <div class="control">
+              <div class="control-row">
+                <label for="lineOpacity">Opacity</label>
+                <output id="lineOpacityValue" for="lineOpacity">72%</output>
+              </div>
+              <input class="range" id="lineOpacity" type="range" min="0.1" max="1" step="0.01" value="0.72" />
+            </div>
+          </div>
+
+          <div class="control-row control-row--color">
+            <label for="lineColor">Line color</label>
+            <div class="color-control">
+              <input id="lineColor" type="color" value="#ff2a1a" aria-label="Line color" />
+              <output id="lineColorValue" for="lineColor">#FF2A1A</output>
+            </div>
+          </div>
+
+          <div class="toggle-list">
+            <label class="toggle-row" for="logFrequency">
+              <span>
+                <strong>Logarithmic frequency</strong>
+                <small>Expands low-frequency detail</small>
+              </span>
+              <input class="toggle" id="logFrequency" type="checkbox" checked />
+            </label>
+
+            <label class="toggle-row" for="mirrorFrequency">
+              <span>
+                <strong>Mirror frequencies</strong>
+                <small>Creates a symmetrical spectrum</small>
+              </span>
+              <input class="toggle" id="mirrorFrequency" type="checkbox" />
+            </label>
+
+            <label class="toggle-row" for="beatPulse">
+              <span>
+                <strong>Beat pulse</strong>
+                <small>Accents transients and bass hits</small>
+              </span>
+              <input class="toggle" id="beatPulse" type="checkbox" checked />
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__heading">
+            <div>
+              <p class="panel__index">03</p>
+              <h2>Camera</h2>
+            </div>
+            <button class="text-button" id="resetCamera" type="button">RESET</button>
+          </div>
+
+          <div class="control-grid">
+            <div class="control">
+              <div class="control-row">
+                <label for="cameraDistance">Distance</label>
+                <output id="cameraDistanceValue" for="cameraDistance">190</output>
+              </div>
+              <input class="range" id="cameraDistance" type="range" min="80" max="360" step="1" value="190" />
+            </div>
+
+            <div class="control">
+              <div class="control-row">
+                <label for="cameraHeight">Elevation</label>
+                <output id="cameraHeightValue" for="cameraHeight">68</output>
+              </div>
+              <input class="range" id="cameraHeight" type="range" min="10" max="160" step="1" value="68" />
+            </div>
+
+            <div class="control">
+              <div class="control-row">
+                <label for="cameraDrift">Audio follow</label>
+                <output id="cameraDriftValue" for="cameraDrift">45%</output>
+              </div>
+              <input class="range" id="cameraDrift" type="range" min="0" max="1" step="0.01" value="0.45" />
+            </div>
+          </div>
+
+          <div class="toggle-list">
+            <label class="toggle-row" for="autoCamera">
+              <span>
+                <strong>Audio-follow camera</strong>
+                <small>Tracks the live spectral centroid</small>
+              </span>
+              <input class="toggle" id="autoCamera" type="checkbox" checked />
+            </label>
+
+            <label class="toggle-row" for="showGrid">
+              <span>
+                <strong>Reference grid</strong>
+                <small>Show the floor plane beneath the field</small>
+              </span>
+              <input class="toggle" id="showGrid" type="checkbox" checked />
+            </label>
+          </div>
+        </section>
+
+        <footer class="sidebar__footer">
+          <span>LEFT DRAG: ROTATE</span>
+          <span>RIGHT DRAG: PAN</span>
+          <span>WHEEL: ZOOM</span>
+          <span>SPACEBAR: PLAY/PAUSE</span>
+        </footer>
+      </aside>
+
+      <main class="viewport" id="viewport">
+        <canvas id="visualizer" aria-label="Real-time 3D spectrogram"></canvas>
+
+        <div class="viewport__topbar">
+          <button class="icon-button menu-button" id="openSidebar" type="button" aria-label="Open controls">
+            <span></span><span></span><span></span>
+          </button>
+
+          <div class="live-readout" aria-live="polite">
+            <span class="live-readout__dot" id="liveDot"></span>
+            <span id="liveStatus">READY</span>
+          </div>
+
+          <button class="icon-button fullscreen-button" id="fullscreenButton" type="button" aria-label="Toggle fullscreen">
+            <span aria-hidden="true">⛶</span>
+          </button>
+        </div>
+
+        <div class="viewport__hud">
+          <div class="hud-block">
+            <span>FFT</span>
+            <strong id="fftReadout">2048</strong>
+          </div>
+          <div class="hud-block">
+            <span>BINS</span>
+            <strong id="binsReadout">96</strong>
+          </div>
+          <div class="hud-block">
+            <span>ENERGY</span>
+            <strong id="energyReadout">0.00</strong>
+          </div>
+          <div class="hud-block">
+            <span>PEAK</span>
+            <strong id="peakReadout">0.00</strong>
+          </div>
+        </div>
+
+        <div class="drop-overlay" id="dropOverlay" aria-hidden="true">
+          <div>
+            <span>＋</span>
+            <strong>Drop audio to load</strong>
+          </div>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <div class="empty-state__mark" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <p>LOAD AN AUDIO FILE TO START THE REAL-TIME ANALYSIS</p>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
