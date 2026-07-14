@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="A real-time, audio-reactive 3D spectrogram built with Three.js and the Web Audio API."
+    />
+    <title>3D Spectrogram</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="appShell">
+      <aside class="sidebar" id="sidebar" aria-label="Visualizer controls">
+        <button
+          class="icon-button sidebar__collapse"
+          id="sidebarToggle"
+          type="button"
+          aria-controls="sidebar"
+          aria-expanded="true"
+          aria-label="Collapse sidebar"
+          title="Collapse sidebar"
+        >
+          <span id="sidebarToggleIcon" aria-hidden="true">‹</span>
+        </button>
+
+        <header class="sidebar__header">
+          <div>
+            <p class="eyebrow">AUDIO REACTIVE / THREE.JS</p>
+            <h1>3D Spectrogram</h1>
+          </div>
+          <button class="icon-button sidebar__close" id="closeSidebar" type="button" aria-label="Close controls">
+            <span aria-hidden="true">×</span>
+          </button>
+        </header>
+
+        <section class="panel panel--upload" data-collapsible data-section-name="Audio Source">
+          <div class="panel__heading">
+            <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="audioPanelContent">
+              <span class="panel__heading-label">
+                <span class="panel__index">01</span>
+                <span class="panel__title">Audio Source</span>
+              </span>
+              <span class="panel__chevron" aria-hidden="true"></span>
+            </button>
+            <span class="status-badge" id="audioStatus">NO FILE</span>
+          </div>
+
+          <div class="panel__content" id="audioPanelContent">
+            <div class="panel__content-inner">
+              <label class="file-drop" id="fileDrop" for="audioFile">
+                <input id="audioFile" type="file" accept="audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.opus" />
+                <span class="file-drop__icon" aria-hidden="true">＋</span>
+                <span class="file-drop__title" id="audioFileButtonText">Load audio file</span>
+                <span class="file-drop__copy" id="audioFileButtonCopy">Choose or drop WAV, MP3, M4A, FLAC, OGG, or OPUS</span>
+                <span class="file-drop__progress" id="audioLoadProgress" hidden>
+                  <progress id="audioLoadProgressBar" max="100" value="0" aria-label="Audio loading progress"></progress>
+                  <span id="audioLoadProgressPercent">0%</span>
+                </span>
+              </label>
+              <span class="visually-hidden" id="audioLoadStage" aria-live="polite"></span>
+
+              <div class="track-card" id="trackCard">
+                <div class="track-card__art" aria-hidden="true">
+                  <span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <div class="track-card__meta">
+                  <strong id="trackName">No audio loaded</strong>
+                  <span id="trackDetails">Select a local file to begin</span>
+                </div>
+              </div>
+
+              <audio id="audio" preload="metadata"></audio>
+
+              <div class="transport" aria-label="Playback controls">
+                <button class="transport__button" id="stopButton" type="button" aria-label="Stop" disabled>
+                  <span class="stop-icon" aria-hidden="true"></span>
+                </button>
+                <button class="transport__button transport__button--primary" id="playButton" type="button" aria-label="Play" disabled>
+                  <span class="play-icon" id="playIcon" aria-hidden="true"></span>
+                </button>
+                <button class="transport__button" id="loopButton" type="button" aria-label="Toggle loop" aria-pressed="false" disabled>
+                  <span aria-hidden="true">↻</span>
+                </button>
+              </div>
+
+              <div class="timeline">
+                <div class="timeline__times">
+                  <span id="currentTime">0:00</span>
+                  <span id="duration">0:00</span>
+                </div>
+                <input class="range range--wide" id="seek" type="range" min="0" max="1000" value="0" disabled aria-label="Seek" />
+              </div>
+
+              <div class="control-row">
+                <label for="volume">Volume</label>
+                <output id="volumeValue" for="volume">85%</output>
+              </div>
+              <input class="range range--wide" id="volume" type="range" min="0" max="1" step="0.01" value="0.85" aria-label="Volume" />
+
+              <div class="toggle-list">
+                <label class="toggle-row" for="muteToggle">
+                  <span>
+                    <strong>Mute</strong>
+                    <small>Silence playback without changing volume</small>
+                  </span>
+                  <input class="toggle" id="muteToggle" type="checkbox" role="switch" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" data-collapsible data-section-name="Spectrogram">
+          <div class="panel__heading">
+            <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="spectrogramPanelContent">
+              <span class="panel__heading-label">
+                <span class="panel__index">02</span>
+                <span class="panel__title">Spectrogram</span>
+              </span>
+              <span class="panel__chevron" aria-hidden="true"></span>
+            </button>
+            <button class="text-button" id="resetVisuals" type="button">RESET</button>
+          </div>
+
+          <div class="panel__content" id="spectrogramPanelContent">
+            <div class="panel__content-inner">
+              <div class="control-grid">
+                <div class="control">
+                  <div class="control-row">
+                    <label for="heightScale">Height</label>
+                    <output id="heightScaleValue" for="heightScale">42</output>
+                  </div>
+                  <input class="range" id="heightScale" type="range" min="5" max="100" step="1" value="42" />
+                </div>
+
+                <div class="control">
+                  <div class="control-row">
+                    <label for="historyLines">History</label>
+                    <output id="historyLinesValue" for="historyLines">160</output>
+                  </div>
+                  <input class="range" id="historyLines" type="range" min="48" max="260" step="4" value="160" />
+                </div>
+
+                <div class="control">
+                  <div class="control-row">
+                    <label for="frequencyBins">Frequency Detail</label>
+                    <output id="frequencyBinsValue" for="frequencyBins">96</output>
+                  </div>
+                  <input class="range" id="frequencyBins" type="range" min="32" max="192" step="8" value="96" />
+                </div>
+
+                <div class="control">
+                  <div class="control-row">
+                    <label for="fftSize">FFT Size</label>
+                    <select class="select-control" id="fftSize" aria-label="FFT Size">
+                      <option value="512">512</option>
+                      <option value="1024">1024</option>
+                      <option value="2048" selected>2048</option>
+                      <option value="4096">4096</option>
+                      <option value="8192">8192</option>
+                      <option value="16384">16384</option>
+                      <option value="32768">32768</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="control">
+                  <div class="control-row">
+                    <label for="smoothing">Smoothing</label>
+                    <output id="smoothingValue" for="smoothing">0.78</output>
+                  </div>
+                  <input class="range" id="smoothing" type="range" min="0" max="0.95" step="0.01" value="0.78" />
+                </div>
+
+                <div class="control">
+                  <div class="control-row">
+                    <label for="scrollSpeed">Scroll Speed</label>
+                    <output id="scrollSpeedValue" for="scrollSpeed">30 FPS</output>
+                  </div>
+                  <input class="range" id="scrollSpeed" type="range" min="8" max="60" step="1" value="30" />
+                </div>
+
+                <div class="control">
+                  <div class="control-row">
+                    <label for="lineWidth">Line Width</label>
+                    <output id="lineWidthValue" for="lineWidth">0.28</output>
+                  </div>
+                  <input class="range" id="lineWidth" type="range" min="0.05" max="1.5" step="0.01" value="0.28" />
+                </div>
+
+                <div class="control">
+                  <div class="control-row">
+                    <label for="lineOpacity">Opacity</label>
+                    <output id="lineOpacityValue" for="lineOpacity">72%</output>
+                  </div>
+                  <input class="range" id="lineOpacity" type="range" min="0.1" max="1" step="0.01" value="0.72" />
+                </div>
+              </div>
+
+              <div class="control-row control-row--color">
+                <label for="lineColor">Line Color</label>
+                <div class="color-control">
+                  <input id="lineColor" type="color" value="#ff2a1a" aria-label="Line Color" />
+                  <output id="lineColorValue" for="lineColor">#FF2A1A</output>
+                </div>
+              </div>
+
+              <div class="toggle-list">
+                <label class="toggle-row" for="logFrequency">
+                  <span><strong>Logarithmic Frequency</strong><small>Expands low-frequency detail</small></span>
+                  <input class="toggle" id="logFrequency" type="checkbox" checked />
+                </label>
+                <label class="toggle-row" for="mirrorFrequency">
+                  <span><strong>Mirror Frequencies</strong><small>Creates a symmetrical spectrum</small></span>
+                  <input class="toggle" id="mirrorFrequency" type="checkbox" />
+                </label>
+                <label class="toggle-row" for="beatPulse">
+                  <span><strong>Beat Pulse</strong><small>Accents transients and bass hits</small></span>
+                  <input class="toggle" id="beatPulse" type="checkbox" checked />
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" data-collapsible data-section-name="Camera">
+          <div class="panel__heading">
+            <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="cameraPanelContent">
+              <span class="panel__heading-label">
+                <span class="panel__index">03</span>
+                <span class="panel__title">Camera</span>
+              </span>
+              <span class="panel__chevron" aria-hidden="true"></span>
+            </button>
+            <button class="text-button" id="resetCamera" type="button">RESET</button>
+          </div>
+
+          <div class="panel__content" id="cameraPanelContent">
+            <div class="panel__content-inner">
+              <div class="control-grid">
+                <div class="control">
+                  <div class="control-row">
+                    <label for="cameraDistance">Distance</label>
+                    <output id="cameraDistanceValue" for="cameraDistance">190</output>
+                  </div>
+                  <input class="range" id="cameraDistance" type="range" min="80" max="360" step="1" value="190" />
+                </div>
+                <div class="control">
+                  <div class="control-row">
+                    <label for="cameraHeight">Elevation</label>
+                    <output id="cameraHeightValue" for="cameraHeight">68</output>
+                  </div>
+                  <input class="range" id="cameraHeight" type="range" min="10" max="160" step="1" value="68" />
+                </div>
+                <div class="control">
+                  <div class="control-row">
+                    <label for="cameraDrift">Audio Follow</label>
+                    <output id="cameraDriftValue" for="cameraDrift">45%</output>
+                  </div>
+                  <input class="range" id="cameraDrift" type="range" min="0" max="1" step="0.01" value="0.45" />
+                </div>
+              </div>
+
+              <div class="toggle-list">
+                <label class="toggle-row" for="autoCamera">
+                  <span><strong>Audio-Follow Camera</strong><small>Tracks the live spectral centroid</small></span>
+                  <input class="toggle" id="autoCamera" type="checkbox" />
+                </label>
+                <label class="toggle-row" for="showGrid">
+                  <span><strong>Reference Grid</strong><small>Show the floor plane beneath the field</small></span>
+                  <input class="toggle" id="showGrid" type="checkbox" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" data-collapsible data-section-name="Viewport & HUD">
+          <div class="panel__heading">
+            <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="viewportPanelContent">
+              <span class="panel__heading-label">
+                <span class="panel__index">04</span>
+                <span class="panel__title">Viewport &amp; HUD</span>
+              </span>
+              <span class="panel__chevron" aria-hidden="true"></span>
+            </button>
+            <button class="text-button" id="resetHud" type="button">RESET</button>
+          </div>
+
+          <div class="panel__content" id="viewportPanelContent">
+            <div class="panel__content-inner">
+              <div class="control-grid">
+                <div class="control">
+                  <div class="control-row">
+                    <label for="viewportFormat">Viewport Format</label>
+                    <select class="select-control select-control--wide" id="viewportFormat">
+                      <option value="responsive" selected>Responsive</option>
+                      <option value="landscape">Landscape — 16:9</option>
+                      <option value="square">Square — 1:1</option>
+                      <option value="portrait">Portrait — 9:16</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="toggle-list">
+                <label class="toggle-row" for="showFps">
+                  <span><strong>Display FPS</strong><small>Show the live render frame rate</small></span>
+                  <input class="toggle" id="showFps" type="checkbox" />
+                </label>
+                <label class="toggle-row" for="showHud">
+                  <span><strong>Technical HUD Overlay</strong><small>Show metadata, graphs, frame, and crosshair</small></span>
+                  <input class="toggle" id="showHud" type="checkbox" />
+                </label>
+                <label class="toggle-row hud-dependent" for="hudSpectrum">
+                  <span><strong>Frequency Graph</strong><small>Display the live spectrum in the top-right</small></span>
+                  <input class="toggle" id="hudSpectrum" type="checkbox" checked />
+                </label>
+                <label class="toggle-row hud-dependent" for="hudWaveform">
+                  <span><strong>Waveform Graph</strong><small>Display the live waveform in the bottom-left</small></span>
+                  <input class="toggle" id="hudWaveform" type="checkbox" checked />
+                </label>
+                <label class="toggle-row hud-dependent" for="hudLevels">
+                  <span><strong>Peak &amp; RMS Graph</strong><small>Display level meters in the bottom-right</small></span>
+                  <input class="toggle" id="hudLevels" type="checkbox" checked />
+                </label>
+                <label class="toggle-row hud-dependent" for="hudFrame">
+                  <span><strong>Technical Frame</strong><small>Display the border, guides, and center crosshair</small></span>
+                  <input class="toggle" id="hudFrame" type="checkbox" checked />
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" data-collapsible data-section-name="Export">
+          <div class="panel__heading">
+            <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="exportPanelContent">
+              <span class="panel__heading-label">
+                <span class="panel__index">05</span>
+                <span class="panel__title">Export</span>
+              </span>
+              <span class="panel__chevron" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <div class="panel__content" id="exportPanelContent">
+            <div class="panel__content-inner">
+              <div class="control-grid">
+                <div class="control">
+                  <div class="control-row"><label for="exportFileName">Export File Name</label></div>
+                  <input class="text-input" id="exportFileName" type="text" value="3d-spectrogram" maxlength="80" />
+                </div>
+                <div class="control">
+                  <div class="control-row">
+                    <label for="exportResolution">Export Resolution</label>
+                    <select class="select-control select-control--wide" id="exportResolution">
+                      <option value="1280x720">720p — 1280 × 720</option>
+                      <option value="1920x1080" selected>1080p — 1920 × 1080</option>
+                      <option value="1080x1080">Square — 1080 × 1080</option>
+                      <option value="1080x1920">Portrait — 1080 × 1920</option>
+                      <option value="3840x2160">4K — 3840 × 2160</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="control">
+                  <div class="control-row">
+                    <label for="videoFormat">Video File Type</label>
+                    <select class="select-control select-control--wide" id="videoFormat">
+                      <option value="video/webm;codecs=vp9">WebM — VP9</option>
+                      <option value="video/webm;codecs=vp8">WebM — VP8</option>
+                      <option value="video/mp4">MP4 — Browser Support Required</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="control">
+                  <div class="control-row">
+                    <label for="videoFps">Video Frame Rate</label>
+                    <select class="select-control" id="videoFps">
+                      <option value="24">24 FPS</option>
+                      <option value="30" selected>30 FPS</option>
+                      <option value="60">60 FPS</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="control">
+                  <div class="control-row">
+                    <label for="videoBitrate">Video Bitrate</label>
+                    <select class="select-control" id="videoBitrate">
+                      <option value="8000000">8 Mbps</option>
+                      <option value="16000000" selected>16 Mbps</option>
+                      <option value="24000000">24 Mbps</option>
+                      <option value="40000000">40 Mbps</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <button class="action-button action-button--primary" id="exportVideo" type="button">EXPORT VIDEO</button>
+              <div class="button-row">
+                <button class="action-button" id="exportPng" type="button">EXPORT PNG</button>
+                <button class="action-button" id="exportSettings" type="button">EXPORT JSON</button>
+              </div>
+              <p class="export-status" id="exportStatus" aria-live="polite">Ready to export.</p>
+            </div>
+          </div>
+        </section>
+
+        <footer class="sidebar__footer">
+          <span>LEFT DRAG: ROTATE</span>
+          <span>RIGHT DRAG: PAN</span>
+          <span>WHEEL: ZOOM</span>
+          <span>SPACEBAR: PLAY/PAUSE</span>
+        </footer>
+      </aside>
+
+      <main class="viewport" id="viewport">
+        <div class="viewport-frame" id="viewportFrame">
+          <canvas id="visualizer" aria-label="Real-time 3D spectrogram"></canvas>
+          <canvas id="hudCanvas" class="hud-canvas" aria-hidden="true"></canvas>
+
+          <div class="empty-state" id="emptyState">
+            <div class="empty-state__mark" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <p>LOAD AN AUDIO FILE TO START THE REAL-TIME ANALYSIS</p>
+          </div>
+        </div>
+
+        <div class="viewport__topbar">
+          <button class="icon-button menu-button" id="openSidebar" type="button" aria-label="Open controls">
+            <span></span><span></span><span></span>
+          </button>
+          <div class="live-readout" aria-live="polite">
+            <span class="live-readout__dot" id="liveDot"></span>
+            <span id="liveStatus">READY</span>
+          </div>
+          <button class="icon-button fullscreen-button" id="fullscreenButton" type="button" aria-label="Toggle fullscreen">
+            <span aria-hidden="true">⛶</span>
+          </button>
+        </div>
+
+        <div class="viewport__hud">
+          <div class="hud-block"><span>FFT</span><strong id="fftReadout">2048</strong></div>
+          <div class="hud-block"><span>BINS</span><strong id="binsReadout">96</strong></div>
+          <div class="hud-block"><span>ENERGY</span><strong id="energyReadout">0.00</strong></div>
+          <div class="hud-block"><span>PEAK</span><strong id="peakReadout">0.00</strong></div>
+          <div class="hud-block is-hidden" id="fpsBlock" aria-hidden="true"><span>FPS</span><strong id="fpsReadout">0</strong></div>
+        </div>
+
+        <div class="drop-overlay" id="dropOverlay" aria-hidden="true">
+          <div><span>＋</span><strong>Drop audio to load</strong></div>
+        </div>
+      </main>
+    </div>
+
+    <script src="./vendor/three.global.js"></script>
+    <script src="./vendor/controls/OrbitControls.global.js"></script>
+    <script src="./assets/js/config.js"></script>
+    <script src="./assets/js/core.js"></script>
+    <script src="./assets/js/utils.js"></script>
+    <script src="./assets/js/analysis.js"></script>
+    <script src="./assets/js/playback.js"></script>
+    <script src="./assets/js/loader.js"></script>
+    <script src="./assets/js/renderer.js"></script>
+    <script src="./assets/js/hud.js"></script>
+    <script src="./assets/js/controls.js"></script>
+    <script src="./assets/js/export.js"></script>
+    <script src="./assets/js/app.js"></script>
+  </body>
+</html>
