@@ -47,7 +47,6 @@
           <div class="panel__heading">
             <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="audioPanelContent">
               <span class="panel__heading-label">
-                <span class="panel__index">01</span>
                 <span class="panel__title">Audio Source</span>
               </span>
               <span class="panel__chevron" aria-hidden="true"></span>
@@ -88,8 +87,8 @@
                 <button class="transport__button transport__button--primary" id="playButton" type="button" aria-label="Play" disabled>
                   <span class="play-icon" id="playIcon" aria-hidden="true"></span>
                 </button>
-                <button class="transport__button" id="loopButton" type="button" aria-label="Open loop editor" aria-pressed="false" disabled>
-                  <span aria-hidden="true">↻</span>
+                <button class="transport__button" id="resetViewButton" type="button" aria-label="Reset view" title="Reset view">
+                  <span aria-hidden="true">↺</span>
                 </button>
               </div>
 
@@ -106,9 +105,9 @@
 
               <div class="control-row">
                 <label for="volume">Volume</label>
-                <output id="volumeValue" for="volume">85%</output>
+                <output id="volumeValue" for="volume">100%</output>
               </div>
-              <input class="range range--wide" id="volume" type="range" min="0" max="1" step="0.01" value="0.85" aria-label="Volume" />
+              <input class="range range--wide" id="volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume" />
 
               <div class="toggle-list">
                 <label class="toggle-row" for="muteToggle">
@@ -127,7 +126,6 @@
           <div class="panel__heading">
             <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="spectrogramPanelContent">
               <span class="panel__heading-label">
-                <span class="panel__index">02</span>
                 <span class="panel__title">Spectrogram</span>
               </span>
               <span class="panel__chevron" aria-hidden="true"></span>
@@ -229,7 +227,7 @@
                 </label>
                 <label class="toggle-row" for="beatPulse">
                   <span><strong>Beat Pulse</strong><small>Accents transients and bass hits</small></span>
-                  <input class="toggle" id="beatPulse" type="checkbox" checked />
+                  <input class="toggle" id="beatPulse" type="checkbox" />
                 </label>
               </div>
             </div>
@@ -240,7 +238,6 @@
           <div class="panel__heading">
             <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="cameraPanelContent">
               <span class="panel__heading-label">
-                <span class="panel__index">03</span>
                 <span class="panel__title">Camera</span>
               </span>
               <span class="panel__chevron" aria-hidden="true"></span>
@@ -292,7 +289,6 @@
           <div class="panel__heading">
             <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="viewportPanelContent">
               <span class="panel__heading-label">
-                <span class="panel__index">04</span>
                 <span class="panel__title">Viewport &amp; HUD</span>
               </span>
               <span class="panel__chevron" aria-hidden="true"></span>
@@ -317,6 +313,10 @@
               </div>
 
               <div class="toggle-list">
+                <label class="toggle-row" for="showAnalysisReadout">
+                  <span><strong>Analysis Readout</strong><small>Show FFT, bins, energy, and peak in the viewport</small></span>
+                  <input class="toggle" id="showAnalysisReadout" type="checkbox" checked />
+                </label>
                 <label class="toggle-row" for="showFps">
                   <span><strong>Display FPS</strong><small>Show the live render frame rate</small></span>
                   <input class="toggle" id="showFps" type="checkbox" />
@@ -350,7 +350,6 @@
           <div class="panel__heading">
             <button class="panel__toggle" type="button" aria-expanded="true" aria-controls="exportPanelContent">
               <span class="panel__heading-label">
-                <span class="panel__index">05</span>
                 <span class="panel__title">Export</span>
               </span>
               <span class="panel__chevron" aria-hidden="true"></span>
@@ -424,6 +423,7 @@
           <span>RIGHT DRAG: PAN</span>
           <span>WHEEL: ZOOM</span>
           <span>SPACEBAR: PLAY/PAUSE</span>
+          <span>F: FULLSCREEN</span>
         </footer>
 
         <div class="sidebar-logo" aria-label="Spectrogramic logo">
@@ -455,20 +455,14 @@
           <button class="icon-button menu-button" id="openSidebar" type="button" aria-label="Open controls">
             <span></span><span></span><span></span>
           </button>
-          <div class="live-readout" aria-live="polite">
-            <span class="live-readout__dot" id="liveDot"></span>
-            <span id="liveStatus">READY</span>
-          </div>
-          <button class="icon-button fullscreen-button" id="fullscreenButton" type="button" aria-label="Toggle fullscreen">
-            <span aria-hidden="true">⛶</span>
-          </button>
+
         </div>
 
         <div class="viewport__hud">
-          <div class="hud-block"><span>FFT</span><strong id="fftReadout">2048</strong></div>
-          <div class="hud-block"><span>BINS</span><strong id="binsReadout">96</strong></div>
-          <div class="hud-block"><span>ENERGY</span><strong id="energyReadout">0.00</strong></div>
-          <div class="hud-block"><span>PEAK</span><strong id="peakReadout">0.00</strong></div>
+          <div class="hud-block analysis-readout-block"><span>FFT</span><strong id="fftReadout">2048</strong></div>
+          <div class="hud-block analysis-readout-block"><span>BINS</span><strong id="binsReadout">96</strong></div>
+          <div class="hud-block analysis-readout-block"><span>ENERGY</span><strong id="energyReadout">0.00</strong></div>
+          <div class="hud-block analysis-readout-block"><span>PEAK</span><strong id="peakReadout">0.00</strong></div>
           <div class="hud-block is-hidden" id="fpsBlock" aria-hidden="true"><span>FPS</span><strong id="fpsReadout">0</strong></div>
         </div>
 

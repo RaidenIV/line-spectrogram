@@ -7,11 +7,26 @@
   const { setRangeFill } = App.utils;
 
   const visualToggleNames = ["logFrequency", "mirrorFrequency", "beatPulse"];
-  const hudToggleNames = ["showFps", "showHud", "hudSpectrum", "hudWaveform", "hudLevels", "hudFrame"];
+  const hudToggleNames = ["showFps", "showAnalysisReadout", "showHud", "hudSpectrum", "hudWaveform", "hudLevels", "hudFrame"];
+
+  function updateViewportHudVisibility() {
+    const hidden = !state.showAnalysisReadout && !state.showFps;
+    elements.viewportHud.classList.toggle("is-hidden", hidden);
+    elements.viewportHud.setAttribute("aria-hidden", String(hidden));
+  }
+
+  function updateAnalysisReadoutVisibility() {
+    for (const block of elements.analysisReadoutBlocks) {
+      block.classList.toggle("is-hidden", !state.showAnalysisReadout);
+      block.setAttribute("aria-hidden", String(!state.showAnalysisReadout));
+    }
+    updateViewportHudVisibility();
+  }
 
   function updateFpsVisibility() {
     elements.fpsBlock.classList.toggle("is-hidden", !state.showFps);
     elements.fpsBlock.setAttribute("aria-hidden", String(!state.showFps));
+    updateViewportHudVisibility();
   }
 
   function applyRangeValue(name, definition, commitRebuild) {
@@ -99,10 +114,12 @@
           elements.fpsReadout.textContent = "0";
           updateFpsVisibility();
         }
+        if (name === "showAnalysisReadout") updateAnalysisReadoutVisibility();
         if (name === "showHud") App.hud.updateDependentControls();
       });
     }
 
+    updateAnalysisReadoutVisibility();
     updateFpsVisibility();
     App.hud.updateDependentControls();
   }
@@ -162,6 +179,7 @@
     }
     state.viewportFormat = DEFAULTS.viewportFormat;
     elements.viewportFormat.value = DEFAULTS.viewportFormat;
+    updateAnalysisReadoutVisibility();
     updateFpsVisibility();
     App.hud.updateDependentControls();
     App.renderer.setViewportFormat(DEFAULTS.viewportFormat);
@@ -227,6 +245,7 @@
     resetCameraControls,
     resetHudControls,
     updateFpsVisibility,
+    updateAnalysisReadoutVisibility,
     updateSidebarToggle,
   };
 })();

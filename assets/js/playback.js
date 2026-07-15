@@ -9,13 +9,6 @@
     elements.playIcon.classList.toggle("is-pause", state.isPlaying);
     elements.playButton.setAttribute("aria-label", state.isPlaying ? "Pause" : "Play");
     elements.trackCard.classList.toggle("is-playing", state.isPlaying);
-    elements.liveDot.classList.toggle("is-live", state.isPlaying);
-
-    if (state.exportActive) {
-      elements.liveStatus.textContent = "EXPORTING VIDEO";
-    } else {
-      elements.liveStatus.textContent = state.isPlaying ? "ANALYZING LIVE" : state.hasAudio ? "PAUSED" : "READY";
-    }
 
     elements.audioStatus.textContent = state.isPlaying ? "LIVE" : state.hasAudio ? "READY" : "NO FILE";
     elements.audioStatus.classList.toggle("is-ready", state.hasAudio);
@@ -25,8 +18,7 @@
     elements.playButton.disabled = !enabled;
     elements.stopButton.disabled = !enabled;
     elements.seek.disabled = !enabled;
-    if (!enabled) elements.loopButton.disabled = true;
-    else App.loop?.syncLoopButton();
+    App.loop?.syncLoopButton();
   }
 
   function initializeAudioGraph() {
@@ -106,7 +98,8 @@
       }
     } catch (error) {
       console.error(error);
-      elements.liveStatus.textContent = "PLAYBACK ERROR";
+      elements.audioStatus.textContent = "ERROR";
+      elements.audioStatus.classList.remove("is-ready");
     }
   }
 

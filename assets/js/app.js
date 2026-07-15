@@ -45,7 +45,7 @@
 
     elements.playButton.addEventListener("click", App.playback.togglePlayback);
     elements.stopButton.addEventListener("click", App.playback.stopPlayback);
-    elements.loopButton.addEventListener("click", App.loop.openEditor);
+    elements.resetViewButton.addEventListener("click", App.controlsUi.resetCameraControls);
     elements.loopEditorButton.addEventListener("click", App.loop.openEditor);
 
     elements.volume.addEventListener("input", () => App.playback.setVolume(elements.volume.value));
@@ -70,16 +70,16 @@
     });
   }
 
-  function bindViewportEvents() {
-    elements.fullscreenButton.addEventListener("click", async () => {
-      try {
-        if (!document.fullscreenElement) await elements.viewport.requestFullscreen();
-        else await document.exitFullscreen();
-      } catch (error) {
-        console.error(error);
-      }
-    });
+  async function toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) await elements.viewport.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
+  function bindViewportEvents() {
     const preventDragDefaults = (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -121,6 +121,11 @@
       if (event.code === "Space" && !isTyping) {
         event.preventDefault();
         App.playback.togglePlayback();
+      }
+
+      if (event.code === "KeyF" && !isTyping && !event.repeat) {
+        event.preventDefault();
+        toggleFullscreen();
       }
 
       if (event.code === "Escape") {

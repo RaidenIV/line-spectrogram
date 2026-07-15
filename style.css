@@ -97,12 +97,10 @@ select:focus-visible,
 }
 
 .eyebrow,
-.panel__index,
 .sidebar__footer,
 .hud-block span,
 .status-badge,
-.text-button,
-.live-readout {
+.text-button {
   font-family: var(--font-mono);
   letter-spacing: 0.08em;
 }
@@ -205,13 +203,6 @@ h2 {
   align-items: center;
   gap: 10px;
   min-width: 0;
-}
-
-.panel__index {
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 0.67rem;
-  letter-spacing: 0.08em;
 }
 
 .panel__title {
@@ -789,7 +780,7 @@ h2 {
   left: 18px;
   right: 18px;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr;
   align-items: center;
   pointer-events: none;
 }
@@ -811,49 +802,10 @@ h2 {
   background: currentColor;
 }
 
-.fullscreen-button {
-  justify-self: end;
-  font-size: 1rem;
-}
-
-.live-readout {
-  display: inline-flex;
-  align-items: center;
-  justify-self: center;
-  gap: 7px;
-  height: 30px;
-  padding: 0 11px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  background: rgba(8, 8, 8, 0.74);
-  color: #9f9f9f;
-  backdrop-filter: blur(10px);
-  font-size: 0.56rem;
-}
-
-.live-readout__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #4c4c4c;
-}
-
-.live-readout__dot.is-live {
-  background: var(--accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent);
-  animation: live-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes live-pulse {
-  50% {
-    opacity: 0.45;
-  }
-}
-
 .viewport__hud {
   position: absolute;
   z-index: 3;
-  right: 18px;
+  left: 50%;
   bottom: 18px;
   display: grid;
   grid-auto-flow: column;
@@ -864,6 +816,11 @@ h2 {
   border-radius: 8px;
   background: var(--border);
   pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.viewport__hud.is-hidden {
+  display: none;
 }
 
 .hud-block {
@@ -1041,10 +998,12 @@ h2 {
   }
 
   .viewport__hud {
-    left: 12px;
-    right: 12px;
+    left: 50%;
+    right: auto;
     bottom: 12px;
-    grid-auto-columns: minmax(0, 1fr);
+    width: max-content;
+    max-width: calc(100% - 24px);
+    grid-auto-columns: minmax(56px, 1fr);
   }
 
   .hud-block {

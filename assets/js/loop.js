@@ -76,18 +76,11 @@
     const enabled = Boolean(state.loopReady && state.decodedAudioBuffer && duration > 0);
     const active = Boolean(enabled && state.audioLoop && hasPartialLoopSelection());
 
-    elements.loopButton.disabled = !enabled;
-    elements.loopButton.classList.toggle("loop-active", active);
-    elements.loopButton.setAttribute("aria-pressed", String(active));
-    elements.loopButton.setAttribute(
-      "aria-label",
-      enabled ? (active ? "Edit active loop region" : "Open loop editor") : "Loop editor unavailable"
-    );
-    elements.loopButton.title = enabled
-      ? (active ? "Edit active loop region" : "Open loop editor")
-      : "Load a decodable audio file to create a loop";
-
     if (elements.loopEditorButton) {
+      const title = enabled
+        ? (active ? "Edit active loop region" : "Open loop editor")
+        : "Load a decodable audio file to create a loop";
+
       elements.loopEditorButton.disabled = !enabled;
       elements.loopEditorButton.classList.toggle("is-active", active);
       elements.loopEditorButton.textContent = !enabled
@@ -96,7 +89,11 @@
           ? "EDIT ACTIVE LOOP"
           : "OPEN LOOP EDITOR";
       elements.loopEditorButton.setAttribute("aria-pressed", String(active));
-      elements.loopEditorButton.title = elements.loopButton.title;
+      elements.loopEditorButton.setAttribute(
+        "aria-label",
+        enabled ? (active ? "Edit active loop region" : "Open loop editor") : "Loop editor unavailable"
+      );
+      elements.loopEditorButton.title = title;
     }
 
     if (!enabled) {
@@ -447,8 +444,8 @@
             </label>
             <div class="loop-editor__volume-row">
               <button id="loopPreviewMute" type="button" aria-label="Mute loop preview">VOL</button>
-              <input id="loopPreviewVolume" type="range" min="0" max="100" value="85" aria-label="Loop preview volume" />
-              <output id="loopPreviewVolumeValue">85%</output>
+              <input id="loopPreviewVolume" type="range" min="0" max="100" value="100" aria-label="Loop preview volume" />
+              <output id="loopPreviewVolumeValue">100%</output>
             </div>
           </div>
 
@@ -1131,7 +1128,7 @@
     modal.remove();
     modal = null;
     editor = null;
-    (elements.loopEditorButton || elements.loopButton).focus();
+    elements.loopEditorButton?.focus();
   }
 
   App.loop = {

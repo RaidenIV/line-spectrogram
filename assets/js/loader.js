@@ -129,7 +129,6 @@
     const supportedMime = Boolean(file?.type && file.type.startsWith("audio/"));
 
     if (!file || (!supportedMime && !supportedExtension)) {
-      elements.liveStatus.textContent = "UNSUPPORTED FILE";
       elements.audioStatus.textContent = "ERROR";
       return;
     }
@@ -145,7 +144,6 @@
 
     elements.audioStatus.textContent = "LOADING";
     elements.audioStatus.classList.remove("is-ready");
-    elements.liveStatus.textContent = "LOADING AUDIO";
     elements.emptyState.classList.add("is-hidden");
     elements.trackName.textContent = file.name.replace(/\.[^.]+$/, "");
     elements.trackDetails.textContent = `${(file.name.split(".").pop() || "AUDIO").toUpperCase()} • ${formatBytes(file.size)}`;
@@ -199,7 +197,6 @@
     App.playback.updateSeekUi();
     elements.audioStatus.textContent = "READY";
     elements.audioStatus.classList.add("is-ready");
-    elements.liveStatus.textContent = "READY";
     finishLoadingUi(true);
   }
 
@@ -209,7 +206,6 @@
     App.playback.setTransportEnabled(false);
     App.loop.resetLoopState();
     const errorCode = elements.audio.error?.code;
-    elements.liveStatus.textContent = error?.message || (errorCode === 4 ? "FORMAT NOT SUPPORTED" : "DECODE ERROR");
     elements.audioStatus.textContent = "ERROR";
     elements.audioStatus.classList.remove("is-ready");
     elements.trackCard.classList.remove("is-playing");
