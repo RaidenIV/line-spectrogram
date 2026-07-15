@@ -157,6 +157,7 @@
     state.loopWaveformPeaks = buildWaveformPeaks(buffer);
     updateAudioLoopMode();
     syncLoopButton();
+    App.exporting?.updateExportEstimate();
   }
 
   function resetLoopState() {
@@ -170,6 +171,7 @@
     state.loopWaveformPeaks = null;
     elements.audio.loop = false;
     syncLoopButton();
+    App.exporting?.updateExportEstimate();
   }
 
   function applyLoop(start, end, options = {}) {
@@ -197,6 +199,7 @@
     }
 
     syncLoopButton();
+    App.exporting?.updateExportEstimate();
   }
 
   function clearLoop() {
@@ -206,6 +209,7 @@
     state.loopEnd = duration;
     elements.audio.loop = false;
     syncLoopButton();
+    App.exporting?.updateExportEstimate();
   }
 
   function enforceSelectedLoop() {

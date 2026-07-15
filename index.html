@@ -34,8 +34,14 @@
         </button>
 
         <header class="sidebar__header">
-          <div>
+          <div class="sidebar__brand-block">
             <h1>Waterfall Spectrogram</h1>
+            <div class="sidebar__utility-row" aria-label="Application utilities">
+              <button class="mini-icon-button" id="undoButton" type="button" aria-label="Undo" title="Undo (Ctrl+Z)" disabled>↶</button>
+              <button class="mini-icon-button" id="redoButton" type="button" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled>↷</button>
+              <button class="mini-icon-button" id="shortcutsButton" type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
+              <button class="mini-icon-button" id="diagnosticsButton" type="button" aria-label="Browser capabilities" title="Browser capabilities">i</button>
+            </div>
           </div>
           <button class="icon-button sidebar__close" id="closeSidebar" type="button" aria-label="Close controls">
             <span aria-hidden="true">×</span>
@@ -76,6 +82,14 @@
                   <span id="trackDetails">Select a local file to begin</span>
                 </div>
               </div>
+
+              <dl class="track-info" id="trackInfo" aria-label="Loaded audio information">
+                <div><dt>Format</dt><dd id="trackFormat">—</dd></div>
+                <div><dt>Size</dt><dd id="trackSize">—</dd></div>
+                <div><dt>Duration</dt><dd id="trackDuration">—</dd></div>
+                <div><dt>Sample Rate</dt><dd id="trackSampleRate">—</dd></div>
+                <div><dt>Channels</dt><dd id="trackChannels">—</dd></div>
+              </dl>
 
               <audio id="audio" preload="metadata"></audio>
 
@@ -205,6 +219,89 @@
                   </div>
                   <input class="range" id="lineOpacity" type="range" min="0.1" max="1" step="0.01" value="0.72" />
                 </div>
+
+                <div class="control">
+                  <div class="control-row"><label for="amplitudeMode">Amplitude Mode</label></div>
+                  <select class="select-control select-control--wide" id="amplitudeMode">
+                    <option value="fixed">Fixed</option>
+                    <option value="track">Track Normalized</option>
+                    <option value="adaptive" selected>Adaptive</option>
+                  </select>
+                </div>
+
+                <div class="control">
+                  <div class="control-row"><label for="colorMode">Color Mode</label></div>
+                  <select class="select-control select-control--wide" id="colorMode">
+                    <option value="single" selected>Single Color</option>
+                    <option value="frequency">Frequency Bands</option>
+                    <option value="amplitude">Amplitude</option>
+                    <option value="depth">Age / Depth</option>
+                  </select>
+                </div>
+
+                <div class="control">
+                  <div class="control-row"><label for="renderMode">Render Mode</label></div>
+                  <select class="select-control select-control--wide" id="renderMode">
+                    <option value="lines">Lines</option>
+                    <option value="ribbons" selected>Ribbons</option>
+                    <option value="points">Points</option>
+                    <option value="wire">Wire Surface</option>
+                    <option value="solid">Solid Surface</option>
+                  </select>
+                </div>
+
+                <div class="control">
+                  <div class="control-row"><label for="inputGain">Input Gain</label><output id="inputGainValue" for="inputGain">1.00×</output></div>
+                  <input class="range" id="inputGain" type="range" min="0.25" max="4" step="0.05" value="1" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="noiseFloor">Noise Floor</label><output id="noiseFloorValue" for="noiseFloor">3%</output></div>
+                  <input class="range" id="noiseFloor" type="range" min="0" max="0.3" step="0.005" value="0.025" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="dynamicRange">Dynamic Range</label><output id="dynamicRangeValue" for="dynamicRange">60 dB</output></div>
+                  <input class="range" id="dynamicRange" type="range" min="24" max="96" step="1" value="60" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="rowSpacing">Row Spacing</label><output id="rowSpacingValue" for="rowSpacing">1.00×</output></div>
+                  <input class="range" id="rowSpacing" type="range" min="0.35" max="2.5" step="0.05" value="1" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="historyDepth">History Depth</label><output id="historyDepthValue" for="historyDepth">142</output></div>
+                  <input class="range" id="historyDepth" type="range" min="60" max="280" step="2" value="142" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="depthCurve">Depth Curve</label><output id="depthCurveValue" for="depthCurve">1.00</output></div>
+                  <input class="range" id="depthCurve" type="range" min="0.4" max="2.5" step="0.05" value="1" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="depthOpacity">Depth Opacity</label><output id="depthOpacityValue" for="depthOpacity">70%</output></div>
+                  <input class="range" id="depthOpacity" type="range" min="0" max="1" step="0.01" value="0.7" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="depthBrightness">Depth Brightness</label><output id="depthBrightnessValue" for="depthBrightness">62%</output></div>
+                  <input class="range" id="depthBrightness" type="range" min="0" max="1" step="0.01" value="0.62" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="depthHeightDecay">Height Decay</label><output id="depthHeightDecayValue" for="depthHeightDecay">0%</output></div>
+                  <input class="range" id="depthHeightDecay" type="range" min="0" max="1" step="0.01" value="0" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="depthFog">Depth Fog</label><output id="depthFogValue" for="depthFog">24%</output></div>
+                  <input class="range" id="depthFog" type="range" min="0" max="1" step="0.01" value="0.24" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="transientSensitivity">Transient Sensitivity</label><output id="transientSensitivityValue" for="transientSensitivity">1.35×</output></div>
+                  <input class="range" id="transientSensitivity" type="range" min="1.05" max="2.5" step="0.05" value="1.35" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="transientIntensity">Transient Intensity</label><output id="transientIntensityValue" for="transientIntensity">35%</output></div>
+                  <input class="range" id="transientIntensity" type="range" min="0" max="1" step="0.01" value="0.35" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="transientDecay">Transient Decay</label><output id="transientDecayValue" for="transientDecay">4.2</output></div>
+                  <input class="range" id="transientDecay" type="range" min="1" max="10" step="0.1" value="4.2" />
+                </div>
               </div>
 
               <div class="control-row control-row--color">
@@ -227,6 +324,10 @@
                 <label class="toggle-row" for="beatPulse">
                   <span><strong>Beat Pulse</strong><small>Accents transients and bass hits</small></span>
                   <input class="toggle" id="beatPulse" type="checkbox" />
+                </label>
+                <label class="toggle-row" for="transientHighlight">
+                  <span><strong>Transient Highlight</strong><small>Emphasize sharp attacks independently of beat pulse</small></span>
+                  <input class="toggle" id="transientHighlight" type="checkbox" />
                 </label>
               </div>
             </div>
@@ -270,6 +371,51 @@
                 </div>
               </div>
 
+              <div class="control-grid camera-advanced-controls">
+                <div class="control">
+                  <div class="control-row"><label for="cameraPreset">Camera Preset</label></div>
+                  <select class="select-control select-control--wide" id="cameraPreset">
+                    <option value="front">Front</option>
+                    <option value="elevated" selected>Elevated</option>
+                    <option value="lowHorizon">Low Horizon</option>
+                    <option value="isometric">Isometric</option>
+                    <option value="side">Side</option>
+                    <option value="top">Top</option>
+                    <option value="cinematic">Cinematic</option>
+                  </select>
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="cameraMotion">Camera Motion</label></div>
+                  <select class="select-control select-control--wide" id="cameraMotion">
+                    <option value="static" selected>Static</option>
+                    <option value="slowOrbit">Slow Orbit</option>
+                    <option value="forwardDrift">Forward Drift</option>
+                    <option value="sideSweep">Side Sweep</option>
+                    <option value="audioFollow">Audio Follow</option>
+                    <option value="keyframes">Keyframes</option>
+                  </select>
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="cameraFollowSource">Follow Source</label></div>
+                  <select class="select-control select-control--wide" id="cameraFollowSource">
+                    <option value="spectralCentroid" selected>Spectral Centroid</option>
+                    <option value="energy">Overall Energy</option>
+                    <option value="bass">Bass Energy</option>
+                    <option value="peakFrequency">Peak Frequency</option>
+                  </select>
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="cameraMotionSpeed">Motion Speed</label><output id="cameraMotionSpeedValue" for="cameraMotionSpeed">0.12</output></div>
+                  <input class="range" id="cameraMotionSpeed" type="range" min="0.02" max="0.6" step="0.01" value="0.12" />
+                </div>
+              </div>
+
+              <div class="button-row">
+                <button class="action-button" id="addCameraKeyframe" type="button">ADD KEYFRAME</button>
+                <button class="action-button" id="clearCameraKeyframes" type="button">CLEAR KEYFRAMES</button>
+              </div>
+              <p class="compact-status" id="cameraKeyframeStatus">0 camera keyframes</p>
+
               <div class="toggle-list">
                 <label class="toggle-row" for="autoCamera">
                   <span><strong>Audio-Follow Camera</strong><small>Tracks the live spectral centroid</small></span>
@@ -309,6 +455,33 @@
                     </select>
                   </div>
                 </div>
+                <div class="control">
+                  <div class="control-row"><label for="qualityPreset">Quality</label></div>
+                  <select class="select-control select-control--wide" id="qualityPreset">
+                    <option value="auto">Auto</option>
+                    <option value="performance">Performance</option>
+                    <option value="balanced" selected>Balanced</option>
+                    <option value="high">High</option>
+                    <option value="maximum">Maximum</option>
+                  </select>
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="hudOpacity">HUD Opacity</label><output id="hudOpacityValue" for="hudOpacity">90%</output></div>
+                  <input class="range" id="hudOpacity" type="range" min="0.2" max="1" step="0.01" value="0.9" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="hudScale">HUD Scale</label><output id="hudScaleValue" for="hudScale">100%</output></div>
+                  <input class="range" id="hudScale" type="range" min="0.65" max="1.6" step="0.01" value="1" />
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="safeAreaMode">Safe-Area Guide</label></div>
+                  <select class="select-control select-control--wide" id="safeAreaMode">
+                    <option value="off" selected>Off</option>
+                    <option value="90">90% Frame</option>
+                    <option value="title">Title Safe</option>
+                    <option value="social">Social Video</option>
+                  </select>
+                </div>
               </div>
 
               <div class="toggle-list">
@@ -340,6 +513,14 @@
                   <span><strong>Technical Frame</strong><small>Display the border, guides, and center crosshair</small></span>
                   <input class="toggle" id="hudFrame" type="checkbox" checked />
                 </label>
+                <label class="toggle-row hud-dependent" for="hudFrequencyLabels">
+                  <span><strong>Frequency Labels</strong><small>Show 20 Hz–20 kHz markers beneath the spectrum</small></span>
+                  <input class="toggle" id="hudFrequencyLabels" type="checkbox" checked />
+                </label>
+                <label class="toggle-row" for="safeAreaAffectsHud">
+                  <span><strong>Constrain HUD to Safe Area</strong><small>Move HUD elements inside the selected guide</small></span>
+                  <input class="toggle" id="safeAreaAffectsHud" type="checkbox" />
+                </label>
               </div>
             </div>
           </div>
@@ -353,11 +534,46 @@
               </span>
               <span class="panel__chevron" aria-hidden="true"></span>
             </button>
+            <button class="text-button" id="resetExport" type="button">RESET</button>
           </div>
 
           <div class="panel__content" id="exportPanelContent">
             <div class="panel__content-inner">
               <div class="control-grid">
+                <div class="control">
+                  <div class="control-row"><label for="outputPreset">Output Preset</label></div>
+                  <select class="select-control select-control--wide" id="outputPreset">
+                    <option value="custom" selected>Custom</option>
+                    <option value="youtube4k">YouTube 4K</option>
+                    <option value="youtube1080">YouTube 1080p</option>
+                    <option value="instagramReel">Instagram Reel</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="squarePost">Square Post</option>
+                  </select>
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="exportMode">Export Mode</label></div>
+                  <select class="select-control select-control--wide" id="exportMode">
+                    <option value="realtime" selected>Real Time</option>
+                    <option value="offline">High Quality Offline</option>
+                  </select>
+                </div>
+                <div class="control">
+                  <div class="control-row"><label for="exportRange">Export Range</label></div>
+                  <select class="select-control select-control--wide" id="exportRange">
+                    <option value="full" selected>Full Track</option>
+                    <option value="loop">Active Loop</option>
+                    <option value="custom">Custom Range</option>
+                  </select>
+                </div>
+                <div class="control export-custom-range" id="exportStartControl" hidden>
+                  <div class="control-row"><label for="exportStart">Start (seconds)</label></div>
+                  <input class="text-input" id="exportStart" type="number" min="0" step="0.01" value="0" />
+                </div>
+                <div class="control export-custom-range" id="exportEndControl" hidden>
+                  <div class="control-row"><label for="exportEnd">End (seconds)</label></div>
+                  <input class="text-input" id="exportEnd" type="number" min="0" step="0.01" value="0" />
+                </div>
                 <div class="control">
                   <div class="control-row"><label for="exportFileName">Export File Name</label></div>
                   <input class="text-input" id="exportFileName" type="text" value="waterfall-spectrogram" maxlength="80" />
@@ -404,10 +620,31 @@
                 </div>
               </div>
 
+              <div class="export-estimate" id="exportEstimate">
+                <div><span>Duration</span><strong id="exportEstimateDuration">0:00</strong></div>
+                <div><span>Estimated Size</span><strong id="exportEstimateSize">—</strong></div>
+                <div><span>Estimated Time</span><strong id="exportEstimateTime">—</strong></div>
+              </div>
+
               <button class="action-button action-button--primary" id="exportVideo" type="button">EXPORT VIDEO</button>
               <div class="button-row">
                 <button class="action-button" id="exportPng" type="button">EXPORT PNG</button>
                 <button class="action-button" id="exportSettings" type="button">EXPORT JSON</button>
+              </div>
+              <div class="button-row">
+                <button class="action-button" id="importSettingsButton" type="button">IMPORT JSON</button>
+                <button class="action-button" id="resetAll" type="button">RESET ALL</button>
+              </div>
+              <input id="importSettingsInput" type="file" accept="application/json,.json" hidden />
+
+              <div class="export-progress" id="exportProgress" hidden>
+                <div class="export-progress__header"><strong id="exportProgressTitle">EXPORTING VIDEO</strong><span id="exportProgressPercent">0%</span></div>
+                <progress id="exportProgressBar" max="100" value="0"></progress>
+                <div class="export-progress__grid">
+                  <div><span>Time</span><strong id="exportProgressTime">0:00 / 0:00</strong></div>
+                  <div><span>Frame</span><strong id="exportProgressFrame">0 / 0</strong></div>
+                  <div><span>Remaining</span><strong id="exportProgressEta">—</strong></div>
+                </div>
               </div>
               <p class="export-status" id="exportStatus" aria-live="polite">Ready to export.</p>
             </div>
@@ -420,6 +657,7 @@
           <span>WHEEL: ZOOM</span>
           <span>SPACEBAR: PLAY/PAUSE</span>
           <span>F: FULLSCREEN</span>
+          <span>?: SHORTCUTS</span>
         </footer>
 
         <div class="sidebar-logo" aria-label="Spectrogramic logo">
@@ -463,9 +701,46 @@
         </div>
 
         <div class="drop-overlay" id="dropOverlay" aria-hidden="true">
-          <div><span>＋</span><strong>Drop audio to load</strong></div>
+          <div><span>＋</span><strong>Drop audio to load</strong><small id="dropOverlayFile">Local processing only</small></div>
+        </div>
+
+        <div class="context-loss-overlay" id="contextLossOverlay" hidden>
+          <div class="context-loss-overlay__card">
+            <strong id="contextLossTitle">RENDERER PAUSED</strong>
+            <p id="contextLossMessage">The WebGL context was lost. Waiting for the browser to restore it.</p>
+            <button class="action-button" id="reloadRendererButton" type="button">REBUILD RENDERER</button>
+          </div>
         </div>
       </main>
+    </div>
+
+
+    <div class="utility-modal" id="shortcutsModal" hidden role="dialog" aria-modal="true" aria-labelledby="shortcutsTitle">
+      <div class="utility-modal__card">
+        <div class="utility-modal__header"><h2 id="shortcutsTitle">Keyboard Shortcuts</h2><button class="icon-button" data-close-modal="shortcutsModal" type="button" aria-label="Close">×</button></div>
+        <div class="shortcut-grid">
+          <kbd>SPACE</kbd><span>Play / Pause</span><kbd>F</kbd><span>Fullscreen</span><kbd>R</kbd><span>Reset View</span>
+          <kbd>L</kbd><span>Open Loop Editor</span><kbd>G</kbd><span>Toggle Grid</span><kbd>H</kbd><span>Toggle HUD</span>
+          <kbd>M</kbd><span>Mute</span><kbd>CTRL + E</kbd><span>Export Video</span><kbd>CTRL + P</kbd><span>Export PNG</span>
+          <kbd>CTRL + Z</kbd><span>Undo</span><kbd>CTRL + SHIFT + Z</kbd><span>Redo</span><kbd>ESC</kbd><span>Close / Cancel</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="utility-modal" id="diagnosticsModal" hidden role="dialog" aria-modal="true" aria-labelledby="diagnosticsTitle">
+      <div class="utility-modal__card utility-modal__card--wide">
+        <div class="utility-modal__header"><h2 id="diagnosticsTitle">Browser Capabilities</h2><button class="icon-button" data-close-modal="diagnosticsModal" type="button" aria-label="Close">×</button></div>
+        <div class="capability-grid" id="capabilityGrid"></div>
+      </div>
+    </div>
+
+    <div class="utility-modal" id="errorModal" hidden role="alertdialog" aria-modal="true" aria-labelledby="errorTitle">
+      <div class="utility-modal__card">
+        <div class="utility-modal__header"><h2 id="errorTitle">Operation Could Not Be Completed</h2><button class="icon-button" data-close-modal="errorModal" type="button" aria-label="Close">×</button></div>
+        <p class="error-modal__message" id="errorMessage"></p>
+        <ul class="error-modal__suggestions" id="errorSuggestions"></ul>
+        <button class="action-button action-button--primary" data-close-modal="errorModal" type="button">CLOSE</button>
+      </div>
     </div>
 
     <script src="./vendor/three.global.js"></script>
@@ -479,6 +754,8 @@
     <script src="./assets/js/loader.js"></script>
     <script src="./assets/js/renderer.js"></script>
     <script src="./assets/js/hud.js"></script>
+    <script src="./assets/js/state-manager.js"></script>
+    <script src="./assets/js/diagnostics.js"></script>
     <script src="./assets/js/controls.js"></script>
     <script src="./assets/js/export.js"></script>
     <script src="./assets/js/app.js"></script>

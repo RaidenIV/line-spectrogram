@@ -100,6 +100,11 @@
       console.error(error);
       elements.audioStatus.textContent = "ERROR";
       elements.audioStatus.classList.remove("is-ready");
+      App.diagnostics?.showError(
+        "PLAYBACK COULD NOT START",
+        error?.message || "The browser blocked or failed to start audio playback.",
+        ["Click the Play button again to satisfy the browser gesture requirement.", "Confirm that the selected file is supported by this browser.", "Reload the page if the AudioContext is no longer responsive."]
+      );
     }
   }
 
