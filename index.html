@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="A real-time, audio-reactive 3D spectrogram built with Three.js and the Web Audio API."
+      content="A real-time waterfall spectrogram for loading, visualizing, looping, and exporting local audio."
     />
-    <title>3D Spectrogram</title>
+    <title>Waterfall Spectrogram</title>
     <link rel="icon" href="data:," />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -35,8 +35,7 @@
 
         <header class="sidebar__header">
           <div>
-            <p class="eyebrow">AUDIO REACTIVE / THREE.JS</p>
-            <h1>3D Spectrogram</h1>
+            <h1>Waterfall Spectrogram</h1>
           </div>
           <button class="icon-button sidebar__close" id="closeSidebar" type="button" aria-label="Close controls">
             <span aria-hidden="true">×</span>
@@ -361,37 +360,34 @@
               <div class="control-grid">
                 <div class="control">
                   <div class="control-row"><label for="exportFileName">Export File Name</label></div>
-                  <input class="text-input" id="exportFileName" type="text" value="3d-spectrogram" maxlength="80" />
+                  <input class="text-input" id="exportFileName" type="text" value="waterfall-spectrogram" maxlength="80" />
                 </div>
                 <div class="control">
                   <div class="control-row">
                     <label for="exportResolution">Export Resolution</label>
                     <select class="select-control select-control--wide" id="exportResolution">
-                      <option value="1280x720">720p — 1280 × 720</option>
-                      <option value="1920x1080" selected>1080p — 1920 × 1080</option>
-                      <option value="1080x1080">Square — 1080 × 1080</option>
-                      <option value="1080x1920">Portrait — 1080 × 1920</option>
-                      <option value="3840x2160">4K — 3840 × 2160</option>
+                      <option value="1080">1080</option>
+                      <option value="2k">2K</option>
+                      <option value="4k" selected>4K</option>
                     </select>
                   </div>
                 </div>
                 <div class="control">
                   <div class="control-row">
-                    <label for="videoFormat">Video File Type</label>
+                    <label for="videoFormat">Video Format</label>
                     <select class="select-control select-control--wide" id="videoFormat">
-                      <option value="video/webm;codecs=vp9">WebM — VP9</option>
-                      <option value="video/webm;codecs=vp8">WebM — VP8</option>
-                      <option value="video/mp4">MP4 — Browser Support Required</option>
+                      <option value="mp4" selected>MP4</option>
+                      <option value="mkv">MKV</option>
                     </select>
                   </div>
                 </div>
                 <div class="control">
                   <div class="control-row">
-                    <label for="videoFps">Video Frame Rate</label>
+                    <label for="videoFps">Frame Rate</label>
                     <select class="select-control" id="videoFps">
                       <option value="24">24 FPS</option>
-                      <option value="30" selected>30 FPS</option>
-                      <option value="60">60 FPS</option>
+                      <option value="30">30 FPS</option>
+                      <option value="60" selected>60 FPS</option>
                     </select>
                   </div>
                 </div>
@@ -399,10 +395,10 @@
                   <div class="control-row">
                     <label for="videoBitrate">Video Bitrate</label>
                     <select class="select-control" id="videoBitrate">
-                      <option value="8000000">8 Mbps</option>
-                      <option value="16000000" selected>16 Mbps</option>
-                      <option value="24000000">24 Mbps</option>
-                      <option value="40000000">40 Mbps</option>
+                      <option value="6">6 Mbps</option>
+                      <option value="10">10 Mbps</option>
+                      <option value="16">16 Mbps</option>
+                      <option value="24" selected>24 Mbps</option>
                     </select>
                   </div>
                 </div>

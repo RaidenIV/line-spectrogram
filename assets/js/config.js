@@ -37,11 +37,11 @@
     loopBpm: 125,
     loopBars: 4,
     loopSnap: true,
-    exportFileName: "3d-spectrogram",
-    exportResolution: "1920x1080",
-    videoFormat: "video/webm;codecs=vp9",
-    videoFps: 30,
-    videoBitrate: 16000000,
+    exportFileName: "waterfall-spectrogram",
+    exportResolution: "4k",
+    videoFormat: "mp4",
+    videoFps: 60,
+    videoBitrate: 24,
   });
 
   const CONTROL_DEFINITIONS = Object.freeze({

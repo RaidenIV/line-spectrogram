@@ -1,6 +1,6 @@
-# 3D Spectrogram
+# Waterfall Spectrogram
 
-A real-time, audio-reactive 3D spectrogram built with Three.js and the Web Audio API. Load a local audio file, inspect it as a scrolling 3D frequency surface, create a beat-aligned loop region, customize the visualization, enable an optional technical HUD, and export PNG images, video, or JSON settings.
+A real-time waterfall spectrogram for loading, visualizing, looping, and exporting local audio. Load a local audio file, inspect it as a scrolling 3D frequency surface, create a beat-aligned loop region, customize the visualization, enable an optional technical HUD, and export PNG images, video, or JSON settings.
 
 ## Features
 

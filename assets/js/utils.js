@@ -30,7 +30,7 @@
     return `${(bytes / 1024 ** index).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
   }
 
-  function sanitizeFileName(value, fallback = "3d-spectrogram") {
+  function sanitizeFileName(value, fallback = "waterfall-spectrogram") {
     const normalized = String(value || "")
       .trim()
       .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "-")
@@ -52,10 +52,37 @@
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  function parseResolution(value) {
-    const match = /^(\d+)x(\d+)$/.exec(String(value || ""));
-    if (!match) return { width: 1920, height: 1080 };
-    return { width: Number(match[1]), height: Number(match[2]) };
+  function parseResolution(value, viewportFormat = "landscape") {
+    const normalized = String(value || "").trim().toLowerCase();
+    const match = /^(\d+)x(\d+)$/.exec(normalized);
+
+    if (match) {
+      return { width: Number(match[1]), height: Number(match[2]) };
+    }
+
+    let width = 1920;
+    let height = 1080;
+    let squareSize = 1080;
+
+    if (normalized === "2k") {
+      width = 2560;
+      height = 1440;
+      squareSize = 1440;
+    } else if (normalized === "4k") {
+      width = 3840;
+      height = 2160;
+      squareSize = 2160;
+    }
+
+    if (viewportFormat === "square") {
+      return { width: squareSize, height: squareSize };
+    }
+
+    if (viewportFormat === "portrait") {
+      return { width: height, height: width };
+    }
+
+    return { width, height };
   }
 
   function dateStamp() {

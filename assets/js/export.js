@@ -82,20 +82,36 @@
     if (forceFrameChange) pulseCaptureCanvas();
   }
 
-  function getRequestedMimeType() {
-    const requested = elements.videoFormat.value;
-    const candidates = [
-      requested,
+  function mimeCandidatesForFormat(format) {
+    if (format === "mp4") {
+      return [
+        "video/mp4;codecs=h264,aac",
+        "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+        "video/mp4",
+      ];
+    }
+
+    return [
+      "video/x-matroska;codecs=vp9,opus",
+      "video/x-matroska;codecs=vp8,opus",
+      "video/x-matroska",
       "video/webm;codecs=vp9,opus",
       "video/webm;codecs=vp8,opus",
       "video/webm",
-      "video/mp4",
     ];
-    return candidates.find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || "";
   }
 
-  function extensionForMimeType(mimeType) {
-    return mimeType.includes("mp4") ? "mp4" : "webm";
+  function getSupportedMimeTypeForFormat(format) {
+    return mimeCandidatesForFormat(format).find((type) => window.MediaRecorder?.isTypeSupported?.(type)) || "";
+  }
+
+  function getRequestedMimeType() {
+    const requested = elements.videoFormat.value;
+    return getSupportedMimeTypeForFormat(requested);
+  }
+
+  function extensionForFormat(format) {
+    return format === "mp4" ? "mp4" : "mkv";
   }
 
   function cleanupExportResources() {
@@ -154,7 +170,7 @@
 
     if (!cancelled && recordedChunks.length) {
       const blob = new Blob(recordedChunks, { type: activeMimeType || "video/webm" });
-      const fileName = `${sanitizeFileName(elements.exportFileName.value)}-${dateStamp()}.${extensionForMimeType(activeMimeType)}`;
+      const fileName = `${sanitizeFileName(elements.exportFileName.value)}-${dateStamp()}.${extensionForFormat(elements.videoFormat.value)}`;
       downloadBlob(blob, fileName);
       setStatus(elements.exportStatus, `Video exported: ${fileName}`);
     } else if (cancelled) {
@@ -192,9 +208,9 @@
     try {
       await App.playback.ensureAudioContextRunning();
       await App.hud.ensureLogoReady();
-      const { width, height } = parseResolution(elements.exportResolution.value);
+      const { width, height } = parseResolution(elements.exportResolution.value, state.viewportFormat);
       const fps = Number(elements.videoFps.value);
-      const bitrate = Number(elements.videoBitrate.value);
+      const bitrate = Number(elements.videoBitrate.value) * 1000000;
 
       exportCanvas = createCompositeCanvas(width, height);
       exportContext = exportCanvas.getContext("2d", { alpha: false });
@@ -284,7 +300,7 @@
     if (now < nextCaptureTime) return;
     nextCaptureTime = now + 1000 / fps;
 
-    const { width, height } = parseResolution(elements.exportResolution.value);
+    const { width, height } = parseResolution(elements.exportResolution.value, state.viewportFormat);
     renderCompositeFrame(width, height, true);
 
     const duration = elements.audio.duration;
@@ -307,7 +323,7 @@
     setStatus(elements.exportStatus, "Preparing PNG export...");
     try {
       await App.hud.ensureLogoReady();
-      const { width, height } = parseResolution(elements.exportResolution.value);
+      const { width, height } = parseResolution(elements.exportResolution.value, state.viewportFormat);
       pngRenderer = createExportRenderer(width, height);
       pngCanvas = createCompositeCanvas(width, height);
       const context = pngCanvas.getContext("2d", { alpha: false });
@@ -350,7 +366,7 @@
     settings.videoBitrate = Number(elements.videoBitrate.value);
 
     const payload = {
-      app: "3D Spectrogram",
+      app: "Waterfall Spectrogram",
       version: 2,
       exportedAt: new Date().toISOString(),
       settings,
@@ -368,7 +384,7 @@
     elements.videoBitrate.value = String(state.videoBitrate);
 
     for (const option of elements.videoFormat.options) {
-      option.disabled = Boolean(window.MediaRecorder?.isTypeSupported) && !MediaRecorder.isTypeSupported(option.value);
+      option.disabled = !getSupportedMimeTypeForFormat(option.value);
     }
     if (elements.videoFormat.selectedOptions[0]?.disabled) {
       const supported = [...elements.videoFormat.options].find((option) => !option.disabled);
