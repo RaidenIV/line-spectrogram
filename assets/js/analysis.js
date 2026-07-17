@@ -126,7 +126,9 @@
       depthWrite: state.renderMode === "solid",
       blending: state.renderMode === "solid" ? THREE.NormalBlending : THREE.AdditiveBlending,
       side: THREE.DoubleSide,
-      fog: true,
+      // Keep the spectrogram color independent of camera distance.
+      // Age-based depth fading remains controlled by uDepthFog above.
+      fog: false,
       toneMapped: false,
       wireframe: state.renderMode === "wire",
     });
